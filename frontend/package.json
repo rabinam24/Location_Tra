@@ -17,6 +17,7 @@
     "chart.js": "^4.4.2",
     "chartjs-plugin-datalabels": "^2.2.0",
     "faker": "^6.6.6",
+    "google-maps-react": "^2.0.6",
     "leaflet": "^1.9.4",
     "leaflet-react": "^3.0.5",
     "moment": "^2.30.1",

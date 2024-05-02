@@ -26,7 +26,7 @@ function App() {
           <div>
             <Landing />
             <TravelLog />
-            <UserForm />
+            {/* <UserForm /> */}
             <Dashboard />
            <DonutChartPros />
            

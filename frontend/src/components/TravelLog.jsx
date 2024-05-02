@@ -17,21 +17,30 @@ export default function UserForm() {
     const { name, value } = e.target;
     if (name === "Image") {
       setFormData((prevState) => ({
-        ...prevState,
+       ...prevState,
         [name]: e.target.files[0],
       }));
     } else {
       setFormData((prevState) => ({
-        ...prevState,
+       ...prevState,
         [name]: value,
       }));
     }
   };
-
   const handleSubmit = (e) => {
     e.preventDefault();
-    // Handle form submission, e.g., send data to server
-    console.log(formData);
+    const formData = new FormData();
+    Object.keys(formData).forEach((key) => {
+      formData.append(key, formData[key]);
+    });
+  
+    fetch('/api/submit', {
+      method: 'POST',
+      body: formData,
+    })
+    .then((response) => response.json())
+    .then((data) => console.log(data))
+    .catch((error) => console.error(error));
   };
 
   return (
@@ -99,7 +108,7 @@ export default function UserForm() {
             navigator.geolocation.getCurrentPosition((position) => {
               const location = `${position.coords.latitude}, ${position.coords.longitude}`;
               setFormData((prevState) => ({
-                ...prevState,
+               ...prevState,
                 GpsLocation: location,
               }));
             });
