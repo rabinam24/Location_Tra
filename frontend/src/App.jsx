@@ -11,6 +11,7 @@ import LogoutButton from './pages/Logout';
 // import { Chart } from 'chart.js';
 import ChartBar from './components/Chart';
 import DonutChartPros from './components/Donutchartpros';
+import TodayLog from './components/TodayLog';
 // import DonutChartPros from './components/Donutchartpros';
 
 
@@ -25,7 +26,8 @@ function App() {
           <Route path="/" element={
           <div>
             <Landing />
-            <TravelLog />
+            {/* <TravelLog /> */}
+            {/* <TodayLog /> */}
             {/* <UserForm /> */}
             <Dashboard />
            <DonutChartPros />
@@ -37,6 +39,7 @@ function App() {
          
           <Route path="/Login" element={<LoginButton />} css: true href={'app.css'} />
           <Route path="/logout" element={<LogoutButton />} css: true href={'app.css'} />
+          <Route path="/travellog" css: true href={'app.css'} />
           
         </Routes>
       </div>

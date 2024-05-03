@@ -9,6 +9,10 @@ const app = express();
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
+app.get('/', (req, res) => {
+  res.send('Hello, World!');
+})
+
 app.post('/api/submit', (req, res) => {
   const formData = req.body;
 

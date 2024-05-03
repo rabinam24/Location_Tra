@@ -1,23 +1,29 @@
-import React from "react";
+import React, { useState } from "react";
 import { FaArrowUpLong } from "react-icons/fa6";
+import UserForm from "./TravelLog";
+import "../pages/travellog.jsx";
 
 function Landing() {
+  const [showForm, setShowForm] = useState(false);
+
+  const handleStartTrip = () => {
+    setShowForm(true);
+  };
+
   return (
     <div className="h-screen bg-zinc-900 pt-1">
       <div className="textstructure mt-20 md:mt-40 lg:mt-60 xl:mt-80 px-4 md:px-10 lg:px-20 xl:px-30">
-        {["Welcome To", "Location Tracker", "Application"].map(
-          (item, index) => {
-            return (
-              <div className="masker" key={index}>
-                {" "}
-                {/* Add key prop here */}
-                <h1 className="uppercase text-4xl md:text-5xl lg:text-6xl xl:text-7xl leading-tight tracking-tighter font-semibold">
-                  {item}
-                </h1>
-              </div>
-            );
-          }
-        )}
+        {["Welcome To", "Location Tracker", "Application"].map((item, index) => {
+          return (
+            <div className="masker" key={index}>
+              {" "}
+              {/* Add key prop here */}
+              <h1 className="uppercase text-4xl md:text-5xl lg:text-6xl xl:text-7xl leading-tight tracking-tighter font-semibold">
+                {item}
+              </h1>
+            </div>
+          );
+        })}
       </div>
 
       {/* <div>
@@ -35,7 +41,18 @@ function Landing() {
       <div className="flex justify-center mt-10 md:mt-20 lg:mt-30 xl:mt-40">
         <div className="flex flex-wrap justify-center gap-5 md:gap-10 lg:gap-15 xl:gap-20">
           <div className="px-5 py-2 border-[2px] border-zinc-500 rounded-full font-light text-md uppercase">
-            Travel Logs
+            <button
+              type="submit"
+              style={{
+                backgroundColor: "red",
+                color: "white",
+                cursor: "pointer",
+                transition: "background-color 0.3s ease-in-out",
+              }}
+              onClick={handleStartTrip}
+            >
+              Start the Trip
+            </button>
           </div>
           <div className="px-5 py-2 border-[2px] border-zinc-500 rounded-full font-light text-md uppercase">
             History
@@ -45,6 +62,20 @@ function Landing() {
           </div>
         </div>
       </div>
+
+      {showForm && (
+        <div
+          className="absolute top-0 left-0 w-full h-screen bg-white z-10"
+          style={{ zIndex: 10 }}
+        >
+          <UserForm />
+        </div>
+      )}
+
+      {/* <div className="dashboard-container"> */}
+        {/* dashboard content here */}
+      {/* </div> */}
+      
     </div>
   );
 }

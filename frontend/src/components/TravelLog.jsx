@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import TodayLog from "./TodayLog";
 
 export default function UserForm() {
   const [formData, setFormData] = useState({
@@ -17,12 +18,12 @@ export default function UserForm() {
     const { name, value } = e.target;
     if (name === "Image") {
       setFormData((prevState) => ({
-       ...prevState,
+        ...prevState,
         [name]: e.target.files[0],
       }));
     } else {
       setFormData((prevState) => ({
-       ...prevState,
+        ...prevState,
         [name]: value,
       }));
     }
@@ -33,19 +34,19 @@ export default function UserForm() {
     Object.keys(formData).forEach((key) => {
       formData.append(key, formData[key]);
     });
-  
-    fetch('/api/submit', {
-      method: 'POST',
+
+    fetch("/api/submit", {
+      method: "POST",
       body: formData,
     })
-    .then((response) => response.json())
-    .then((data) => console.log(data))
-    .catch((error) => console.error(error));
+      .then((response) => response.json())
+      .then((data) => console.log(data))
+      .catch((error) => console.error(error));
   };
 
   return (
     <div
-      className="bg-zinc-900"
+      className=" bg-zinc-900  text-white"
       style={{
         minHeight: "100vh",
         display: "flex",
@@ -53,6 +54,7 @@ export default function UserForm() {
         alignItems: "center",
       }}
     >
+      <TodayLog />
       <form
         style={{
           display: "flex",
@@ -108,7 +110,7 @@ export default function UserForm() {
             navigator.geolocation.getCurrentPosition((position) => {
               const location = `${position.coords.latitude}, ${position.coords.longitude}`;
               setFormData((prevState) => ({
-               ...prevState,
+                ...prevState,
                 GpsLocation: location,
               }));
             });
@@ -172,6 +174,15 @@ export default function UserForm() {
 
           {/* Add more options as needed */}
         </select>
+        
+        {/* code code and code for the betterment of the code for and for thr betterment of the future,  I need to learn every
+        fucking things and be the finest programmer from nepal , I wanna learn everything for that I need to work , I  need to take the action for the betterment  action
+        ,action is everything and for now I will learn the PERN stack completely in the effiecient way and learn about the devops and all  the stuff,
+        1) PERN stack that is postgres, express, react, nodejs // for now till birthday I will learn PERN stack only, and Javascipt ma pro huney sikney DSA javascipt ma.... and Gita only
+        2) Devops that is Docker, aws and kubernates and etc
+        3) I need to be the best programmer
+        4) I need to read Bhagavat Geeta
+        5) I need to learn every things  */}
 
         <select
           name="SelectPoolStatus"
