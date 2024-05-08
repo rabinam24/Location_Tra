@@ -1,0 +1,51 @@
+
+  
+  /* #root {
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 1em;
+    font-family: sans-serif;
+    color: #333;
+    background-color: #f3e4d7;
+  }
+   */
+  /* height of the container */
+  /* .leaflet-container {
+    height: 90vh;
+    width: 90%;
+    border-radius: 2rem;
+    margin-left: 50px;
+    padding: 20px;
+  } */
+  
+  .cluster-icon {
+    background-color: #333;
+    height: 2em;
+    width: 2em;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    font-size: 1.2rem;
+    box-shadow: 0 0 0px 5px #fff;
+  }
+  
+  .map-container {
+    position: relative;
+    width: 100%;
+    height: 0;
+    padding-bottom: 75%; /* Aspect ratio of 4:3, adjust as needed */
+  }
+  
+  .map-container .leaflet-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100% !important;
+    height: 100% !important;
+  }
+  

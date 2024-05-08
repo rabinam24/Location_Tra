@@ -25,7 +25,7 @@ function DonutChartPros() {
       <DonutCharts data={data2} title="Donut Chart 2"  />
       {/* //wanna add the image in the side of the donut,  */}
 
-      <img src='../assets/react.svg' className='w-32 h-32 ml-10' alt='react logo' />
+      {/* <img src='../assets/react.svg' className='w-32 h-32 ml-10' alt='react logo' /> */}
       
     </div>
   );

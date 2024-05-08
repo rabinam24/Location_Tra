@@ -1,0 +1,74 @@
+.profile-container {
+  max-width: 800px;
+  margin: 40px auto;
+  padding: 20px;
+  background-color: #f9f9f9;
+  border: 1px solid #ddd;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.profile-heading {
+  font-size: 24px;
+  margin-bottom: 20px;
+}
+
+.profile-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.profile-item {
+  display: flex;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+  padding: 20px;
+  border-bottom: 1px solid #ddd;
+}
+
+.profile-labels {
+  flex: 1;
+}
+
+.profile-actions {
+  flex: 1;
+  text-align: right;
+}
+
+.edit-button {
+  margin: 10px;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  background-color: blue;
+  color: #fff;
+  cursor: pointer;
+}
+
+.delete-button {
+  margin: 10px;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  background-color: red;
+  color: #fff;
+  cursor: pointer;
+}
+.edit-button:hover,.delete-button:hover {
+  background-color: #3e8e41;
+}
+
+@media (max-width: 600px) {
+ .profile-container {
+    padding: 10px;
+  }
+ .profile-item {
+    flex-direction: column;
+  }
+ .profile-labels {
+    margin-bottom: 10px;
+  }
+ .profile-actions {
+    text-align: center;
+  }
+}

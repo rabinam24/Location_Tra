@@ -6,7 +6,7 @@ function Navbar() {
 
   return (
     <div className='fixed z-[999] w-full px-20 py-8 flex justify-between items-center'>
-      <div className='logo'>
+      <div className='logo text-xl text-white'>
         <h1>Location Tracker</h1>
       </div>
       {/* <div className='links flex gap-10 ml-80'>
