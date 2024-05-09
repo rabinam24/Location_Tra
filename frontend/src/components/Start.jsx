@@ -1,31 +1,46 @@
-import React, { useState } from 'react'
+import React, { useState } from "react";
+import axios from "axios";
+import Apps from "../FormApp";
 
 const TripComponent = () => {
-    const [ username, setUsername ] = useState('');
-    const [ starttime, setStartTime ] = useState('');
+  const [username, setUsername] = useState("");
+  const [starttime, setStartTime] = useState("");
+  const [tripStarted, setTripStarted] = useState(false);
 
-    //Function to handle click event when user enter the start the trip
+  const handleClick = async () => {
+    const currentuser = "Rabinam"; // Replace with actual username retrieval logic
+    const currenttime = new Date().toLocaleString();
 
-    const handleClick = () => {
+    setUsername(currentuser);
+    setStartTime(currenttime);
+    setTripStarted(true); // Set tripStarted to true when trip starts
 
-        const currentuser = 'Rabinam'; //we can replace with the actual username from the authentication service
-
-        const currenttime = new Date().toLocaleString();
-
-        setUsername(currentuser);
-        setStartTime(currenttime);
-
+    // Send trip information to the backend
+    try {
+      const response = await axios.post("/api/trip/start", {
+        username: currentuser,
+        starttime: currenttime,
+      });
+      console.log("Trip started successfully:", response.data);
+    } catch (error) {
+      console.error("Error starting trip:", error);
     }
+  };
 
-    return (
-        <div>
-            <h1> Start The Trip </h1>
-            <button onClick={handleClick}> Start The Trip </button>
-            <h1> {username} </h1>
-            <h1> {starttime} </h1>
-        </div>
-    )
-}
-
+  return (
+    <div>
+      {tripStarted ? (
+        <Apps />
+      ) : (
+        <button
+          onClick={handleClick}
+          className="bg-red-600 text-white rounded-lg pd-10 ml-10 mr-10 mb-10 mu-10 border-none"
+        >
+          Start The Trip
+        </button>
+      )}
+    </div>
+  );
+};
 
 export default TripComponent;

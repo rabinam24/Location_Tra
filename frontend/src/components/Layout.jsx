@@ -1,14 +1,17 @@
 import React from "react";
-import Navbar from "./navbar";
+// import Navbar from "./navbar";
 import Landing from "./LandingPage";
-import Dashboard from "./Dashboard";
-import DonutChartPros from "./Donutchartpros";
+import TripComponent from "./Start";
+// import Dashboard from "./Dashboard";
+// import DonutChartPros from "./Donutchartpros";
 
 const Layout = ({ children }) => {
     return (
     <>
     {/* <Navbar /> */}
     <Landing />
+   
+
     {/* <Dashboard /> */}
     {/* <DonutChartPros /> */}
 

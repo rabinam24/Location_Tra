@@ -28,11 +28,13 @@ const Profile = ({ allInfo, editContent, setAllInfo, setEditContent }) => {
             <div className="profile-labels">
               <span>Location:</span> {inf.location} <br />
               <span>Gps Location:</span> {inf.gpslocation} <br />
-              <span>ISP:</span> {inf.selectisp} <br />
               <span>Description:</span> {inf.description} <br />  
               <span>Pool Status:</span> {inf.selectpoolstatus} <br />
               <span>Pool Type:</span> {inf.selectpool} <br />
               <span>Pool Location:</span> {inf.selectpoollocation} <br />
+              <span>Available ISP:</span> {inf.availableisp} <br />
+              <span>ISP:</span> {inf.selectisp} <br />
+              <span>Multiple Images:</span> {inf.multipleimages} <br />
               <span>Created At:</span> {inf.createdAt} <br />
             </div>
             <div className="profile-actions">

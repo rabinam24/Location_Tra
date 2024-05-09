@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { FaArrowUpLong } from "react-icons/fa6";
 import Form from "./FormInput.jsx";
 import mapImage from '../assets/Map.png'; 
+import TripComponent from "./Start.jsx";
 
 function Landing() {
   const [showForm, setShowForm] = useState(false);
@@ -45,7 +46,9 @@ function Landing() {
         
       </div>
      
-      <button type="submit" className="start-button bg-red-600 text-white rounded-lg pd-10 ml-10 mr-10 mb-10 mu-10 border-none  "> Start The Trip </button>
+      {/* <button type="submit" className="start-button bg-red-600 text-white rounded-lg pd-10 ml-10 mr-10 mb-10 mu-10 border-none  "> Start The Trip </button> */}
+
+      < TripComponent />
 
       {showForm && (
         <div

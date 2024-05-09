@@ -12,12 +12,16 @@ function Apps() {
   const [userInfo, setUserInfo] = useState({
     location: "",
     gpslocation: "",
-    selectisp: "",
     selectpool: "",
     selectpoolstatus: "",
     selectpoollocation: "",
     description: "",
-    image: "",
+    poolimage: "",
+    availableisp: "",
+    selectisp: "",
+    multipleimages: "",
+   
+
   });
   const [allInfo, setAllInfo] = useState([]);
   const [editContent, setEditContent] = useState({});
@@ -80,3 +84,4 @@ function Apps() {
 }
 
 export default Apps;
+

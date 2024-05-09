@@ -61,7 +61,6 @@ return (
             </button>
           </th>
           <th>Gps Location</th>
-          <th>Select ISP</th>
           <th>Select Pool</th>
           <th>Select Pool Status</th>
           <th>Select Pool Location</th>
@@ -73,7 +72,6 @@ return (
           <tr key={info.id}>
             <td>{info.location}</td>
             <td>{info.gpslocation}</td>
-            <td>{info.selectisp}</td>
             <td>{info.selectpool}</td>
             <td>{info.selectpoolstatus}</td>
             <td>{info.selectpoollocation}</td>
