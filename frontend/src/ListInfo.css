@@ -1,4 +1,4 @@
-/* 
+
   .table-responsive {
     overflow-x: auto;
   }
@@ -24,40 +24,4 @@
   
   .edit-button:hover,.delete-button:hover {
     background-color: #3e8e41;
-  } */
-
-
-  .table-responsive {
-    overflow-x: auto;
   }
-  
-  table {
-    display: block;
-    width: 100%; /* Ensure the table takes up the full width */
-    border-collapse: separate;
-    border-spacing: 0;
-  }
-  
-  th, td {
-    padding: 10px;
-    border-bottom: 1px solid #ddd;
-  }
-  
-  th {
-    background-color: #f0f0f0;
-  }
-  
-  .edit-button, .delete-button {
-    margin: 10px;
-    padding: 10px 20px;
-    border: none;
-    border-radius: 5px;
-    background-color: #4CAF50;
-    color: #fff;
-    cursor: pointer;
-  }
-  
-  .edit-button:hover, .delete-button:hover {
-    background-color: #3e8e41;
-  }
-  

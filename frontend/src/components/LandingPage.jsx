@@ -17,11 +17,14 @@ function Landing() {
           {["Welcome To", "Location Tracker", "Application"].map(
             (item, index) => {
               return (
+             
                 <div className="masker" key={index}>
                   <h1 className="uppercase text-4xl md:text-5xl lg:text-6xl xl:text-7xl leading-tight tracking-tighter font-semibold">
                     {item}
                   </h1>
                 </div>
+                
+              
               );
             }
           )}
@@ -39,7 +42,10 @@ function Landing() {
             boxShadow: "0px 0px 10px rgba(0, 0, 0, 0.2)", // Add a subtle box shadow
           }}
         />
+        
       </div>
+     
+      <button type="submit" className="start-button bg-red-600 text-white rounded-lg pd-10 ml-10 mr-10 mb-10 mu-10 border-none  "> Start The Trip </button>
 
       {showForm && (
         <div
