@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
 import Apps from "../FormApp";
 
@@ -6,6 +6,7 @@ const TripComponent = () => {
   const [username, setUsername] = useState("");
   const [starttime, setStartTime] = useState("");
   const [tripStarted, setTripStarted] = useState(false);
+  const [elapsedTime, setElapsedTime] = useState(0);
 
   const handleClick = async () => {
     const currentuser = "Rabinam"; // Replace with actual username retrieval logic
@@ -14,27 +15,29 @@ const TripComponent = () => {
     setUsername(currentuser);
     setStartTime(currenttime);
     setTripStarted(true); // Set tripStarted to true when trip starts
-
-    // Send trip information to the backend
-    try {
-      const response = await axios.post("/api/trip/start", {
-        username: currentuser,
-        starttime: currenttime,
-      });
-      console.log("Trip started successfully:", response.data);
-    } catch (error) {
-      console.error("Error starting trip:", error);
-    }
   };
+
+  useEffect(() => {
+    if (tripStarted) {
+      const intervalId = setInterval(() => {
+        setElapsedTime((prevElapsedTime) => prevElapsedTime + 1);
+      }, 60000); // Update elapsed time every minute
+
+      return () => clearInterval(intervalId);
+    }
+  }, [tripStarted]);
 
   return (
     <div>
       {tripStarted ? (
-        <Apps />
+        <div>
+          <Apps />
+          <p>Your trip has been started for {elapsedTime} minutes.</p>
+        </div>
       ) : (
         <button
           onClick={handleClick}
-          className="bg-red-600 text-white rounded-lg pd-10 ml-10 mr-10 mb-10 mu-10 border-none"
+          className="bg-red-600 text-white rounded-lg p-4 m-4 border-none"
         >
           Start The Trip
         </button>

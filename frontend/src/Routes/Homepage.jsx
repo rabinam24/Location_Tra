@@ -12,19 +12,19 @@ const Home = ({
 }) => {
   return (
     <div>
-      <Form
+      <List
         userInfo={userInfo} // Make sure userInfo is passed here
         setUserInfo={setUserInfo}
         allInfo={allInfo}
         setAllInfo={setAllInfo}
       />
-      <List
+      {/* <List
         userInfo={userInfo}
         allInfo={allInfo}
         setAllInfo={setAllInfo}
         editContent={editContent}
         setEditContent={setEditContent}
-      />
+      /> */}
     </div>
   );
 };

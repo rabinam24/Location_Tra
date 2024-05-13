@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import "../Profile.css";
 import EditForm from "../components/Editform.jsx";
 
-
 const Profile = ({ allInfo, editContent, setAllInfo, setEditContent }) => {
   document.title = "Profiles";
   const [edit, setEdit] = useState(false);
@@ -15,7 +14,7 @@ const Profile = ({ allInfo, editContent, setAllInfo, setEditContent }) => {
   };
 
   const handleDelete = (id) => {
-    const updatedInfo = allInfo.filter((info) => info.id!== id);
+    const updatedInfo = allInfo.filter((info) => info.id !== id);
     setAllInfo(updatedInfo);
   };
 
@@ -23,7 +22,7 @@ const Profile = ({ allInfo, editContent, setAllInfo, setEditContent }) => {
     <div className="profile-container">
       <h1 className="profile-heading">Pool Profiles</h1>
       <ul className="profile-list">
-        {allInfo.map((inf) => (
+        {allInfo && allInfo.map((inf) => (
           <li key={inf.id} className="profile-item">
             <div className="profile-labels">
               <span>Location:</span> {inf.location} <br />
@@ -44,7 +43,7 @@ const Profile = ({ allInfo, editContent, setAllInfo, setEditContent }) => {
           </li>
         ))}
       </ul>
-      {edit? (
+      {edit && (
         <EditForm
           allInfo={allInfo}
           editContent={editContent}
@@ -53,8 +52,6 @@ const Profile = ({ allInfo, editContent, setAllInfo, setEditContent }) => {
           edit={edit}
           setEdit={setEdit}
         />
-      ) : (
-        <></>
       )}
     </div>
   );
