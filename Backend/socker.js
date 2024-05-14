@@ -4,10 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { Server } from 'socket.io';
 
-
-
 const app = express();
-app.use(express.static('public'));
 const server = createServer(app);
 const io = new Server(server);
 

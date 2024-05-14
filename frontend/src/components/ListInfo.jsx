@@ -2,6 +2,13 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import EditForm from "./Editform.jsx";
 import "../ListInfo.css"
+import Table from '@mui/material/Table';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TableContainer from '@mui/material/TableContainer';
+import TableHead from '@mui/material/TableHead';
+import TableRow from '@mui/material/TableRow';
+import Paper from '@mui/material/Paper';
 
 const List = ({ allInfo = [], setAllInfo, editContent, setEditContent }) => {
   const [edit, setEdit] = useState(false);
@@ -29,7 +36,6 @@ const List = ({ allInfo = [], setAllInfo, editContent, setEditContent }) => {
     setSortDirection(sortDirection === "asc" ? "desc" : "asc");
   };
 
-  // Function to toggle edit mode
   const toggleEdit = (id) => {
     const info = allInfo.find((info) => info.id === id);
     setEditContent(info);
@@ -51,48 +57,50 @@ const List = ({ allInfo = [], setAllInfo, editContent, setEditContent }) => {
 return (
   <div className="list-container">
     <h1 className="text-3xl text-blue-900">User Data</h1>
-    <table className="table-responsive">
-      <thead>
-        <tr>
-          <th>
-            Location{" "}
-            <button className="sort-icon" onClick={handleSort}>
-              {sortDirection === "asc"? "↑" : "↓"}
-            </button>
-          </th>
-          <th>Gps Location</th>
-          <th>Select Pool</th>
-          <th>Select Pool Status</th>
-          <th>Select Pool Location</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        {currentRows.map((info) => (
-          <tr key={info.id}>
-            <td>{info.location}</td>
-            <td>{info.gpslocation}</td>
-            <td>{info.selectpool}</td>
-            <td>{info.selectpoolstatus}</td>
-            <td>{info.selectpoollocation}</td>
-            <td>
-              <button
+    
+    <TableContainer component={Paper}>
+      <Table sx={{ minWidth: 650 }} aria-label="simple table">
+        <TableHead>
+          <TableRow>
+            <TableCell>Location</TableCell>
+            <TableCell>Gps Location</TableCell>
+            <TableCell>Select Pool</TableCell>
+            <TableCell>Select Pool Status</TableCell>
+            <TableCell>Select Pool Location</TableCell>
+            <TableCell>Action</TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {currentRows.map((row) => (
+            <TableRow
+              key={row.id}
+            >
+              <TableCell>{row.location}</TableCell>
+              <TableCell>{row.gpslocation}</TableCell>
+              <TableCell>{row.selectpool}</TableCell>
+              <TableCell>{row.selectpoolstatus}</TableCell>
+              <TableCell>{row.selectpoollocation}</TableCell>
+              <TableCell><button
                 className="edit-button"
                 onClick={() => toggleEdit(info.id)}
               >
                 Edit
               </button>
+             
               <button
                 className="delete-button"
                 onClick={() => handleDelete(info.id)}
               >
                 Delete
               </button>
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
+              </TableCell>
+
+            </TableRow>
+            
+          ))}
+        </TableBody>
+      </Table>
+    </TableContainer>
 
     {/* Render EditForm if edit mode is enabled */}
     {edit && (

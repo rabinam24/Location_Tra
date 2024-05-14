@@ -2,6 +2,9 @@ import React, { useState, useEffect } from "react";
 import Home from "../Routes/Homepage";
 import Profile from "../Routes/Profile";
 import Button from "@mui/material/Button";
+import Box from "@mui/material/Box";
+import Fab from "@mui/material/Fab";
+import AddIcon from "@mui/icons-material/Add";
 
 const Form = () => {
   const [products, setProducts] = useState({
@@ -19,8 +22,6 @@ const Form = () => {
     availableisp: "",
     selectisp: "",
     multipleimages: "",
-   
-
   });
   const [allInfo, setAllInfo] = useState([]);
   const [editContent, setEditContent] = useState({});
@@ -59,8 +60,6 @@ const Form = () => {
     console.log("submit", userInfo);
   };
 
-  
-
   // Load data from localStorage on component mount
   useEffect(() => {
     const storedAllInfo = localStorage.getItem("allInfo");
@@ -74,9 +73,15 @@ const Form = () => {
     localStorage.setItem("allInfo", JSON.stringify(allInfo));
   }, [allInfo]);
 
+  const [boxClicked, setBoxClicked] = useState(false);
+  const [showForm, setShowForm] = useState(false);
+
+  const handleBoxChange = () => {
+    setShowForm(true);
+  };
+
   return (
     <>
-     
       <div
         className="input-form  text-black"
         style={{
@@ -228,8 +233,6 @@ const Form = () => {
             onChange={handleChange}
             style={{
               margin: "8px 0",
-              // backgroundColor: "inherit",
-              // color: "inherit",
               borderRadius: "10px",
               padding: "10px",
               border: "1px solid #ccc",
@@ -256,8 +259,6 @@ const Form = () => {
             style={{
               margin: "8px 0",
               minHeight: "100px",
-              // backgroundColor: "inherit",
-              // color: "inherit",
               borderRadius: "10px",
               padding: "10px",
               border: "1px solid #ccc",
@@ -321,54 +322,111 @@ const Form = () => {
 
           {/* Show detailed image input only when 'availableisp' is 'Yes' */}
           {userInfo.availableisp === "Yes" && (
-            <div>
-              <label htmlFor="selectisp">
-                Select ISP <span className="required-symbol">*</span>
-              </label>
+            <>
+              <div>
+                <label htmlFor="selectisp">
+                  Select ISP <span className="required-symbol">*</span>
+                </label>
+                <select
+                  name="selectisp"
+                  value={userInfo.selectisp}
+                  required
+                  onChange={handleChange}
+                  style={{
+                    margin: "8px 0",
+                    borderRadius: "10px",
+                    padding: "10px",
+                    border: "1px solid #ccc",
+                    transition: "border-color 0.3s ease-in-out",
+                  }}
+                >
+                  <option value="">Select ISP</option>
+                  <option value="World Link">WorldLink</option>
+                  <option value="Nepal Telecom">Nepal Telecom</option>
+                  <option value="Vianet">Vianet</option>
+                  <option value="ClaasicTech">ClassicTech</option>
+                  <option value="Subisu">Subisu</option>
+                  {/* Add more options as needed */}
+                </select>
+                <label htmlFor="multipleimage">
+                  {" "}
+                  Multiple Images <span className="required-symbol">
+                    *
+                  </span>{" "}
+                </label>
+                <input
+                  multiple
+                  type="file"
+                  name="multipleimages"
+                  onChange={handleSliderImages}
+                  style={{
+                    margin: "8px 0",
+                    borderRadius: "10px",
+                    padding: "10px",
+                    border: "1px solid #ccc",
+                    transition: "border-color 0.3s ease-in-out",
+                  }}
+                />
+              </div>
+              <div>
+                <Box sx={{ "& > :not(style)": { m: 1 } }}>
+                  <Fab
+                    color="primary"
+                    aria-label="add"
+                    onClick={handleBoxChange}
+                  >
+                    <AddIcon />
+                  </Fab>
+                </Box>
 
-              <select
-                name="selectisp"
-                value={userInfo.selectisp}
-                required
-                onChange={handleChange}
-                style={{
-                  margin: "8px 0",
-                  borderRadius: "10px",
-                  padding: "10px",
-                  border: "1px solid #ccc",
-                  transition: "border-color 0.3s ease-in-out",
-                }}
-              >
-                <option value="">Select ISP</option>
-                <option value="World Link">WorldLink</option>
-                <option value="Nepal Telecom">Nepal Telecom</option>
-                <option value="Vianet">Vianet</option>
-                <option value="ClaasicTech">ClassicTech</option>
-                <option value="Subisu">Subisu</option>
-                {/* Add more options as needed */}
-              </select>
-
-              <label htmlFor="multipleimage">
-                {" "}
-                Multiple Images <span className="required-symbol">*</span>{" "}
-              </label>
-              <input
-                multiple
-                type="file"
-                name="multipleimages"
-                onChange={handleSliderImages}
-                style={{
-                  margin: "8px 0",
-                  borderRadius: "10px",
-                  padding: "10px",
-                  border: "1px solid #ccc",
-                  transition: "border-color 0.3s ease-in-out",
-                }}
-              />
-            </div>
+                {showForm && (
+                  <div>
+                    <label htmlFor="selectisp">
+                      Select ISP <span className="required-symbol">*</span>
+                    </label>
+                    <select
+                      name="selectisp"
+                      value={userInfo.selectisp}
+                      required
+                      onChange={handleChange}
+                      style={{
+                        margin: "8px 0",
+                        borderRadius: "10px",
+                        padding: "10px",
+                        border: "1px solid #ccc",
+                        transition: "border-color 0.3s ease-in-out",
+                      }}
+                    >
+                      <option value="">Select ISP</option>
+                      <option value="World Link">WorldLink</option>
+                      <option value="Nepal Telecom">Nepal Telecom</option>
+                      <option value="Vianet">Vianet</option>
+                      <option value="ClaasicTech">ClassicTech</option>
+                      <option value="Subisu">Subisu</option>
+                      {/* Add more options as needed */}
+                    </select>
+                    <label htmlFor="multipleimage">
+                      Multiple Images <span className="required-symbol">*</span>
+                    </label>
+                    <input
+                      multiple
+                      type="file"
+                      name="multipleimages"
+                      onChange={handleSliderImages}
+                      style={{
+                        margin: "8px 0",
+                        borderRadius: "10px",
+                        padding: "10px",
+                        border: "1px solid #ccc",
+                        transition: "border-color 0.3s ease-in-out",
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+            </>
           )}
 
-          {/* Rest of the form elements */}
           <Button
             variant="contained"
             color="success"
@@ -378,13 +436,7 @@ const Form = () => {
           >
             Submit
           </Button>
-
-          {/* <button type="submit" className="submit-button">
-            Submit
-          </button> */}
-
         </form>
-
       </div>
       <Home
         userInfo={userInfo}
