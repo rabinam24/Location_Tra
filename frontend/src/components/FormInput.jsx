@@ -41,24 +41,49 @@ const Form = () => {
     console.log("Update slider images", products);
   };
 
-  const handleSubmit = (e) => {
+  // const handleSubmit = (e) => {
+  //   e.preventDefault();
+  //   const newInfo = { ...userInfo, id: new Date().getTime().toString() };
+  //   setAllInfo([...allInfo, newInfo]);
+  //   setUserInfo({
+  //     location: "",
+  //     gpslocation: "",
+  //     selectpool: "",
+  //     selectpoolstatus: "",
+  //     selectpoollocation: "",
+  //     description: "",
+  //     poolimage: "",
+  //     availableisp: "",
+  //     selectisp: "",
+  //     multipleimages: "",
+  //   });
+  //   console.log("submit", userInfo);
+  // };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const newInfo = { ...userInfo, id: new Date().getTime().toString() };
-    setAllInfo([...allInfo, newInfo]);
-    setUserInfo({
-      location: "",
-      gpslocation: "",
-      selectpool: "",
-      selectpoolstatus: "",
-      selectpoollocation: "",
-      description: "",
-      poolimage: "",
-      availableisp: "",
-      selectisp: "",
-      multipleimages: "",
-    });
-    console.log("submit", userInfo);
+    try {
+      const response = await fetch('http://127.0.0.1:5000/submit-user-form', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(userInfo), // Send user input data
+      });
+      if (response.ok) {
+        // Handle successful submission (e.g., show a success message)
+        console.log('Form submitted successfully!');
+      } else {
+        // Handle errors (e.g., show an error message)
+        console.error('Error submitting form.');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+    }
   };
+  
+
+
 
   // Load data from localStorage on component mount
   useEffect(() => {

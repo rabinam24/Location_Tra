@@ -1,6 +1,8 @@
-from flask_sqlalchemy import SQLAlchemy
+# from flask_sqlalchemy import SQLAlchemy
 
-db = SQLAlchemy()
+# db = SQLAlchemy()
+
+from config import db
 
 class UserForm(db.Model):
     id = db.Column(db.Integer, primary_key=True)
