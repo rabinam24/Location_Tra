@@ -126,7 +126,7 @@ def submit_user_form():
         test1 = test_data2.get('location')
         test2 = test_data2.get('gpslocation')
         print(location,gpslocation)
-        return jsonify({"location":f"{test1}","gpslocation":f"{test2}"})
+        return jsonify({"location":f"{test1}","gpslocation":f"{test2}","description":"empty"})
         # return "hahahha"
 
     
