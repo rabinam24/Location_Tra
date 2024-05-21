@@ -1,47 +1,56 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Button from "@mui/material/Button";
 import Grid from "@mui/material/Grid";
-import Form from "./FormInput";
-import MediaCard from "./Cart";
-import ActionAreaCard from "./Cart";
+import FormInput from "./FormInput";
+import HorizontalBars from "./Dashboard";
 
 function NewLanding() {
-  const [username, setUsername] = useState("");
-  const [starttime, setStartTime] = useState("");
-  const [tripStarted, setTripStarted] = useState(false);
-  const [elapsedTime, setElapsedTime] = useState(0);
-  const [showForm, setShowForm] = useState(false);
+  const [trip, setTrip] = useState({ started: false, startTime: null });
+  const [showAddTravelLogButton, setShowAddTravelLogButton] = useState(false);
+  const intervalIdRef = useRef(null);
 
-  const handleClick = async () => {
-    const currentuser = "Rabinam"; // Replace with actual username retrieval logic
-    const currenttime = new Date().toLocaleString();
-
-    setUsername(currentuser);
-    setStartTime(currenttime);
-    setTripStarted(true); // Set tripStarted to true when trip starts
+  const handleClick = () => {
+    const currentuser = "Rabinam";
+    const currenttime = new Date();
+    setTrip({ started: true, startTime: currenttime });
+    setShowAddTravelLogButton(true);
   };
 
-  const handleTravelLog = () => {
-    console.log("i am click", showForm);
-    setShowForm(true);
+  const handleStopClick = () => {
+    setTrip({ started: false, startTime: null });
+    if (intervalIdRef.current) {
+      clearInterval(intervalIdRef.current);
+    }
+    setShowAddTravelLogButton(false);
   };
 
   useEffect(() => {
-    if (tripStarted) {
-      const intervalId = setInterval(() => {
-        setElapsedTime((prevElapsedTime) => prevElapsedTime + 1);
-      }, 60000); // Update elapsed time every minute
-
-      return () => clearInterval(intervalId);
+    if (trip.started && trip.startTime) {
+      intervalIdRef.current = setInterval(() => {
+        // Update the state with the current elapsed time
+        setTrip((prevTrip) => ({
+          ...prevTrip,
+          elapsedTime: new Date() - prevTrip.startTime,
+        }));
+      }, 1000);
     }
-  }, [tripStarted]);
+
+    return () => clearInterval(intervalIdRef.current);
+  }, [trip]);
+
+  const formatElapsedTime = (elapsedTime) => {
+    const seconds = Math.floor(elapsedTime / 1000) % 60;
+    const minutes = Math.floor(elapsedTime / (1000 * 60)) % 60;
+    const hours = Math.floor(elapsedTime / (1000 * 60 * 60));
+
+    return `${hours} hours, ${minutes} minutes, ${seconds} seconds`;
+  };
 
   return (
     <>
       <Grid container justifyContent="center" spacing={2}>
         <Grid item xs={12} sm={6}>
-          {!tripStarted && (
-            <>
+          {!trip.started && (
             <Button
               variant="contained"
               color="error"
@@ -51,30 +60,60 @@ function NewLanding() {
             >
               Start The Trip
             </Button>
-            <ActionAreaCard />
-            </>
           )}
-          
-        
-          {tripStarted && (
+
+          {trip.started && (
             <>
-              <p style={{ marginTop: "10px" }}>
-                Trip started {elapsedTime} minute(s) ago.
+              <h1 className="text-3xl"> Welcome Rabinam </h1>
+              <p className="text-xl" style={{ marginTop: "10px" }}>
+                Trip started at:{" "}
+                <span className="font-bold">
+                  {trip.elapsedTime
+                    ? formatElapsedTime(trip.elapsedTime)
+                    : "00:00:00"}
+                </span>
               </p>
-              {!showForm && (
+              <Grid>
+                <HorizontalBars />
+              </Grid>
+              {showAddTravelLogButton && (
+                <>
+                  <Button
+                    variant="contained"
+                    color="error"
+                    fullWidth
+                    style={{ marginTop: "20px" }}
+                    onClick={() => setShowAddTravelLogButton(false)}
+                  >
+                    Hide Travel Log
+                  </Button>
+                  <FormInput />
+                </>
+              )}
+
+              {!showAddTravelLogButton && (
                 <Button
                   variant="contained"
                   color="error"
                   fullWidth
                   style={{ marginTop: "20px" }}
-                  onClick={handleTravelLog}
+                  onClick={handleClick}
                 >
-                  Travel Log
+                  Show Travel Log
                 </Button>
               )}
+
+              <Button
+                variant="contained"
+                color="error"
+                fullWidth
+                style={{ marginTop: "20px" }}
+                onClick={handleStopClick}
+              >
+                End Trip
+              </Button>
             </>
           )}
-          {showForm && <Form />}
         </Grid>
       </Grid>
     </>

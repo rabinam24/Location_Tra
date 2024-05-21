@@ -5,6 +5,16 @@ import Button from "@mui/material/Button";
 import Box from "@mui/material/Box";
 import Fab from "@mui/material/Fab";
 import AddIcon from "@mui/icons-material/Add";
+import TextField from "@mui/material/TextField";
+import Select from "@mui/material/Select";
+import MenuItem from "@mui/material/MenuItem";
+import FormControl from "@mui/material/FormControl";
+import FormLabel from "@mui/material/FormLabel";
+import FormGroup from "@mui/material/FormGroup";
+import FormControlLabel from "@mui/material/FormControlLabel";
+import Radio from "@mui/material/Radio";
+import RadioGroup from "@mui/material/RadioGroup";
+import TextareaAutosize from "@mui/material/TextareaAutosize";
 
 const Form = () => {
   const [products, setProducts] = useState({
@@ -14,17 +24,19 @@ const Form = () => {
   const [userInfo, setUserInfo] = useState({
     location: "",
     gpslocation: "",
-    selectpool: "",
-    selectpoolstatus: "",
-    selectpoollocation: "",
+    selectpole: "",
+    selectpolestatus: "",
+    selectpolelocation: "",
     description: "",
-    poolimage: "",
+    poleimage: "",
     availableisp: "",
     selectisp: "",
     multipleimages: "",
   });
   const [allInfo, setAllInfo] = useState([]);
   const [editContent, setEditContent] = useState({});
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [showUserData, setShowUserData] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -48,11 +60,11 @@ const Form = () => {
     setUserInfo({
       location: "",
       gpslocation: "",
-      selectpool: "",
-      selectpoolstatus: "",
-      selectpoollocation: "",
+      selectpole: "",
+      selectpolestatus: "",
+      selectpolelocation: "",
       description: "",
-      poolimage: "",
+      poleimage: "",
       availableisp: "",
       selectisp: "",
       multipleimages: "",
@@ -75,9 +87,37 @@ const Form = () => {
 
   const [boxClicked, setBoxClicked] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  // const [additionalInfo, setAdditionalInfo] = useState([]);
 
   const handleBoxChange = () => {
     setShowForm(true);
+  };
+
+  const handleAddMore = () => {
+    const newAdditionalInfo = {
+      selectisp: "",
+      multipleimages: "",
+    };
+    setAdditionalInfo([...additionalInfo, newAdditionalInfo]);
+  };
+  const [additionalInfo, setAdditionalInfo] = useState([]);
+  const handleAdditionalInfoChange = (e, index, inputType) => {
+    const { name, value, files } = e.target;
+    setAdditionalInfo((prevAdditionalInfo) => {
+      const updatedInfo = [...prevAdditionalInfo];
+      if (inputType === "selectisp") {
+        updatedInfo[index] = { ...updatedInfo[index], selectisp: value };
+      } else if (inputType === "multipleimages") {
+        // Handle file upload here if needed
+        // For example, you can store the file(s) in state or perform any other action
+        // updatedInfo[index] = { ...updatedInfo[index], files: files };
+      }
+      return updatedInfo;
+    });
+  };
+
+  const handleUserDataClick = () => {
+    setShowUserData(!showUserData);
   };
 
   return (
@@ -104,48 +144,30 @@ const Form = () => {
             Travel Log
           </h1>
 
-          <input
-            type="text"
+          {/* Existing form fields */}
+          <TextField
             name="location"
-            placeholder="Location"
+            label="Location"
             value={userInfo.location}
-            required
             onChange={handleChange}
-            style={{
-              margin: "8px 0",
-              borderRadius: "10px",
-              padding: "10px",
-              border: "1px solid #ccc",
-              transition: "border-color 0.3s ease-in-out",
-            }}
-            onFocus={(e) => (e.target.style.border = "1px solid #337ab7")}
-            onBlur={(e) => (e.target.style.border = "1px solid #ccc")}
+            variant="outlined"
+            margin="normal"
+            required
           />
 
-          <label htmlFor="gpslocation">
-            GPS Location <span className="required-symbol">*</span>
-          </label>
-
-          <input
-            type="geolocation"
+          <TextField
+            type="text"
             name="gpslocation"
-            placeholder="GpsLocation"
+            label="GPS Location"
             value={userInfo.gpslocation}
             required
             onChange={handleChange}
-            style={{
-              margin: "8px 0",
-              borderRadius: "10px",
-              padding: "10px",
-              border: "1px solid #ccc",
-              transition: "border-color 0.3s ease-in-out",
-            }}
-            onFocus={(e) => (e.target.style.border = "1px solid #337ab7")}
-            onBlur={(e) => (e.target.style.border = "1px solid #ccc")}
+            style={{ margin: "8px 0" }}
           />
 
-          <button
-            type="button"
+          <Button
+            variant="contained"
+            color="primary"
             onClick={() => {
               navigator.geolocation.getCurrentPosition((position) => {
                 const location = `${position.coords.latitude}, ${position.coords.longitude}`;
@@ -155,275 +177,158 @@ const Form = () => {
                 }));
               });
             }}
-            style={{
-              margin: "8px 0",
-              borderRadius: "10px",
-              padding: "10px",
-              border: "none",
-              cursor: "pointer",
-            }}
+            style={{ margin: "8px 0" }}
           >
             Get GPS Location
-          </button>
+          </Button>
 
-          <label htmlFor="selectpool">
-            Select Pool <span className="required-symbol">*</span>
-          </label>
-          <select
-            name="selectpool"
-            value={userInfo.selectpool}
-            required
-            onChange={handleChange}
-            style={{
-              margin: "8px 0",
-              // backgroundColor: "inherit",
-              // color: "inherit",
-              borderRadius: "10px",
-              padding: "10px",
-              border: "1px solid #ccc",
-              transition: "border-color 0.3s ease-in-out",
-            }}
-          >
-            <option value="">Select Pool </option>
-            <option value="Concrite Square Pool"> Concrite Square Pool</option>
-            <option value="Concrite Round Pool"> Concrite Round Pool</option>
-            <option value="Metal Pool"> Metal Pool</option>
-            <option value="Wooden Pool"> Wooden Pool</option>
-            <option value="Bamboo Pool"> Bamboo Pool</option>
+          <FormControl style={{ margin: "8px 0" }}>
+            <FormLabel>Select pole</FormLabel>
+            <Select
+              name="selectpole"
+              value={userInfo.selectpole}
+              required
+              onChange={handleChange}
+            >
+              <MenuItem value="">Select pole</MenuItem>
+              <MenuItem value="Concrite Square pole">
+                Concrite Square pole
+              </MenuItem>
+              <MenuItem value="Concrite Round pole">
+                Concrite Round pole
+              </MenuItem>
+              <MenuItem value="Metal pole">Metal pole</MenuItem>
+              <MenuItem value="Wooden pole">Wooden pole</MenuItem>
+              <MenuItem value="Bamboo pole">Bamboo pole</MenuItem>
+            </Select>
+          </FormControl>
 
-            {/* Add more options as needed */}
-          </select>
+          <FormControl style={{ margin: "8px 0" }}>
+            <FormLabel>Select pole Status</FormLabel>
+            <Select
+              name="selectpolestatus"
+              value={userInfo.selectpolestatus}
+              required
+              onChange={handleChange}
+            >
+              <MenuItem value="">Select pole Status</MenuItem>
+              <MenuItem value="In Great Condition">In Great Condition</MenuItem>
+              <MenuItem value="In Moderate Condition">
+                In Moderate Condition
+              </MenuItem>
+              <MenuItem value="In Bad Condition">In Bad Condition</MenuItem>
+            </Select>
+          </FormControl>
 
-          <label htmlFor="selectpoolstatus">
-            Select Pool Status<span className="required-symbol">*</span>
-          </label>
-          <select
-            name="selectpoolstatus"
-            value={userInfo.selectpoolstatus}
-            required
-            onChange={handleChange}
-            style={{
-              margin: "8px 0",
-              // backgroundColor: "inherit",
-              // color: "inherit",
-              borderRadius: "10px",
-              padding: "10px",
-              border: "1px solid #ccc",
-              transition: "border-color 0.3s ease-in-out",
-            }}
-          >
-            <option value="">Select Pool Status</option>
-            <option value="In Great Condition"> In Great Condition</option>
-            <option value="In Moderate Condition">
-              {" "}
-              In Moderate Condition
-            </option>
-            <option value="In Bad Condition"> In Bad Condition</option>
+          <FormControl style={{ margin: "8px 0" }}>
+            <FormLabel>Select pole Location</FormLabel>
+            <Select
+              name="selectpolelocation"
+              value={userInfo.selectpolelocation}
+              required
+              onChange={handleChange}
+            >
+              <MenuItem value="">Select pole Location</MenuItem>
+              <MenuItem value="Near House">Near House</MenuItem>
+              <MenuItem value="Inside House">Inside House</MenuItem>
+              <MenuItem value="No House NearBy">No House NearBy</MenuItem>
+              <MenuItem value="In Open Space">In Open Space</MenuItem>
+            </Select>
+          </FormControl>
 
-            {/* Add more options as needed */}
-          </select>
-
-          <label htmlFor="selectpoollocation">
-            Select Pool Location <span className="required-symbol">*</span>
-          </label>
-          <select
-            name="selectpoollocation"
-            value={userInfo.selectpoollocation}
-            required
-            onChange={handleChange}
-            style={{
-              margin: "8px 0",
-              borderRadius: "10px",
-              padding: "10px",
-              border: "1px solid #ccc",
-              transition: "border-color 0.3s ease-in-out",
-            }}
-          >
-            <option value="">Select Pool Location</option>
-            <option value="Near House"> Near House</option>
-            <option value="Inside House"> Inside House</option>
-            <option value="No House NearBy"> No House NearBy</option>
-            <option value="In Open Space"> In Open Space</option>
-
-            {/* Add more options as needed */}
-          </select>
-
-          <label htmlFor="description">
-            Description <span></span>
-          </label>
-          <textarea
+          <TextareaAutosize
             name="description"
             placeholder="Description"
             value={userInfo.description}
             onChange={handleChange}
-            style={{
-              margin: "8px 0",
-              minHeight: "100px",
-              borderRadius: "10px",
-              padding: "10px",
-              border: "1px solid #ccc",
-              transition: "border-color 0.3s ease-in-out",
-            }}
-            onFocus={(e) => (e.target.style.border = "1px solid #337ab7")}
-            onBlur={(e) => (e.target.style.border = "1px solid #ccc")}
+            style={{ margin: "8px 0", minHeight: "100px" }}
           />
 
-          <label htmlFor="image">
-            Pool Image <span></span>
-          </label>
           <input
             type="file"
             name="image"
             accept="image/*"
             onChange={handleChange}
-            style={{
-              margin: "8px 0",
-              // backgroundColor: "inherit",
-              // color: "inherit",
-              borderRadius: "10px",
-              padding: "10px",
-              border: "1px solid #ccc",
-              transition: "border-color 0.3s ease-in-out",
-            }}
-            onFocus={(e) => (e.target.style.border = "1px solid #337ab7")}
-            onBlur={(e) => (e.target.style.border = "1px solid #ccc")}
+            style={{ margin: "8px 0" }}
           />
 
-          <div>
-            <label htmlFor="Available ISP">
-              Available ISP <span className="required-symbol">*</span>
-            </label>
-            <div>
-              <input
-                type="radio"
-                name="availableisp"
-                value="Yes"
-                checked={userInfo.availableisp === "Yes"}
-                onChange={handleChange}
-                style={{
-                  margin: "8px 0",
-                  borderRadius: "10px",
-                  padding: "10px",
-                  border: "1px solid #ccc",
-                  transition: "border-color 0.3s ease-in-out",
-                }}
-              />
-              <label htmlFor="availableisp">Yes</label>
-              <input
-                type="radio"
-                name="availableisp"
-                value="No"
-                checked={userInfo.availableisp === "No"}
-                onChange={handleChange}
-              />
-              <label htmlFor="availableisp">No</label>
-            </div>
-          </div>
+          <FormControl component="fieldset" style={{ margin: "8px 0" }}>
+            <FormLabel component="legend">Available ISP</FormLabel>
+            <RadioGroup
+              name="availableisp"
+              value={userInfo.availableisp}
+              onChange={handleChange}
+            >
+              <FormControlLabel value="Yes" control={<Radio />} label="Yes" />
+              <FormControlLabel value="No" control={<Radio />} label="No" />
+            </RadioGroup>
+          </FormControl>
 
-          {/* Show detailed image input only when 'availableisp' is 'Yes' */}
           {userInfo.availableisp === "Yes" && (
             <>
-              <div>
-                <label htmlFor="selectisp">
-                  Select ISP <span className="required-symbol">*</span>
-                </label>
-                <select
+              <FormControl style={{ margin: "8px 0" }}>
+                <FormLabel>Select ISP</FormLabel>
+                <Select
                   name="selectisp"
                   value={userInfo.selectisp}
                   required
                   onChange={handleChange}
-                  style={{
-                    margin: "8px 0",
-                    borderRadius: "10px",
-                    padding: "10px",
-                    border: "1px solid #ccc",
-                    transition: "border-color 0.3s ease-in-out",
-                  }}
                 >
-                  <option value="">Select ISP</option>
-                  <option value="World Link">WorldLink</option>
-                  <option value="Nepal Telecom">Nepal Telecom</option>
-                  <option value="Vianet">Vianet</option>
-                  <option value="ClaasicTech">ClassicTech</option>
-                  <option value="Subisu">Subisu</option>
-                  {/* Add more options as needed */}
-                </select>
-                <label htmlFor="multipleimage">
-                  {" "}
-                  Multiple Images <span className="required-symbol">
-                    *
-                  </span>{" "}
-                </label>
-                <input
-                  multiple
-                  type="file"
-                  name="multipleimages"
-                  onChange={handleSliderImages}
-                  style={{
-                    margin: "8px 0",
-                    borderRadius: "10px",
-                    padding: "10px",
-                    border: "1px solid #ccc",
-                    transition: "border-color 0.3s ease-in-out",
-                  }}
-                />
-              </div>
-              <div>
-                <Box sx={{ "& > :not(style)": { m: 1 } }}>
-                  <Fab
-                    color="primary"
-                    aria-label="add"
-                    onClick={handleBoxChange}
-                  >
-                    <AddIcon />
-                  </Fab>
-                </Box>
+                  <MenuItem value="">Select ISP</MenuItem>
+                  <MenuItem value="World Link">WorldLink</MenuItem>
+                  <MenuItem value="Nepal Telecom">Nepal Telecom</MenuItem>
+                  <MenuItem value="Vianet">Vianet</MenuItem>
+                  <MenuItem value="ClaasicTech">ClassicTech</MenuItem>
+                  <MenuItem value="Subisu">Subisu</MenuItem>
+                </Select>
+              </FormControl>
+              <input
+                multiple
+                type="file"
+                name="multipleimages"
+                onChange={handleSliderImages}
+                style={{ margin: "8px 0" }}
+              />
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={handleAddMore}
+                style={{ margin: "8px 0" }}
+              >
+                Add More
+              </Button>
 
-                {showForm && (
-                  <div>
-                    <label htmlFor="selectisp">
-                      Select ISP <span className="required-symbol">*</span>
-                    </label>
-                    <select
-                      name="selectisp"
-                      value={userInfo.selectisp}
-                      required
-                      onChange={handleChange}
-                      style={{
-                        margin: "8px 0",
-                        borderRadius: "10px",
-                        padding: "10px",
-                        border: "1px solid #ccc",
-                        transition: "border-color 0.3s ease-in-out",
-                      }}
+              {additionalInfo.map((info, index) => (
+                <div key={index}>
+                  <FormControl style={{ margin: "8px 0", width: "100%" }}>
+                    <FormLabel>Select ISP</FormLabel>
+                    <Select
+                      name={`selectisp-${index}`}
+                      value={info.selectisp}
+                      onChange={(e) =>
+                        handleAdditionalInfoChange(e, index, "selectisp")
+                      }
                     >
-                      <option value="">Select ISP</option>
-                      <option value="World Link">WorldLink</option>
-                      <option value="Nepal Telecom">Nepal Telecom</option>
-                      <option value="Vianet">Vianet</option>
-                      <option value="ClaasicTech">ClassicTech</option>
-                      <option value="Subisu">Subisu</option>
-                      {/* Add more options as needed */}
-                    </select>
-                    <label htmlFor="multipleimage">
-                      Multiple Images <span className="required-symbol">*</span>
-                    </label>
-                    <input
-                      multiple
-                      type="file"
-                      name="multipleimages"
-                      onChange={handleSliderImages}
-                      style={{
-                        margin: "8px 0",
-                        borderRadius: "10px",
-                        padding: "10px",
-                        border: "1px solid #ccc",
-                        transition: "border-color 0.3s ease-in-out",
-                      }}
-                    />
-                  </div>
-                )}
-              </div>
+                      <MenuItem value="">Select ISP</MenuItem>
+                      <MenuItem value="World Link">WorldLink</MenuItem>
+                      <MenuItem value="Nepal Telecom">Nepal Telecom</MenuItem>
+                      <MenuItem value="Vianet">Vianet</MenuItem>
+                      <MenuItem value="ClaasicTech">ClassicTech</MenuItem>
+                      <MenuItem value="Subisu">Subisu</MenuItem>
+                    </Select>
+                  </FormControl>
+
+                  <input
+                    multiple
+                    type="file"
+                    name={`multipleimages-${index}`}
+                    onChange={(e) =>
+                      handleAdditionalInfoChange(e, index, "multipleimages")
+                    }
+                    style={{ margin: "8px 0" }}
+                  />
+                </div>
+              ))}
             </>
           )}
 
@@ -431,13 +336,48 @@ const Form = () => {
             variant="contained"
             color="success"
             fullWidth
-            style={{ marginTop: "20px" }}
+            style={{ margin: "20px 0" }}
             type="submit"
           >
             Submit
           </Button>
+
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={handleUserDataClick}
+            style={{ margin: "8px 0" }}
+          >
+            User Data
+          </Button>
+
+          {showUserData && (
+            <div>
+              <Home
+                userInfo={userInfo}
+                setUserInfo={setUserInfo}
+                allInfo={allInfo}
+                setAllInfo={setAllInfo}
+                editContent={editContent}
+                setEditContent={setEditContent}
+              />
+            </div>
+          )}
         </form>
       </div>
+
+      {/* {selectedUser && (
+        <Profile
+          user={selectedUser}
+          setUserInfo={setUserInfo}
+          allInfo={allInfo}
+          setAllInfo={setAllInfo}
+          editContent={editContent}
+          setEditContent={setEditContent}
+          closeProfile={() => setSelectedUser(null)}
+        />
+      )}
+
       <Home
         userInfo={userInfo}
         setUserInfo={setUserInfo}
@@ -445,14 +385,7 @@ const Form = () => {
         setAllInfo={setAllInfo}
         editContent={editContent}
         setEditContent={setEditContent}
-      />
-
-      <Profile
-        allInfo={allInfo}
-        setAllInfo={setAllInfo}
-        editContent={editContent}
-        setEditContent={setEditContent}
-      />
+      /> */}
     </>
   );
 };

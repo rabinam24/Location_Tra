@@ -71,12 +71,12 @@ const EditForm = ({
         </button>
 
         <div className="edit-form-item">
-          <label htmlFor="selectpool">
-            Select Pool <span className="required-symbol">*</span>
+          <label htmlFor="selectpole">
+            Select pole <span className="required-symbol">*</span>
           </label>
           <select
-            name="selectpool"
-            value={editContent.selectpool}
+            name="selectpole"
+            value={editContent.selectpole}
             required
             onChange={handleChange}
             style={{
@@ -87,22 +87,22 @@ const EditForm = ({
               transition: "border-color 0.3s ease-in-out",
             }}
           >
-            <option value="">Select Pool </option>
-            <option value="Concrite Square Pool"> Concrite Square Pool</option>
-            <option value="Concrite Round Pool"> Concrite Round Pool</option>
-            <option value="Metal Pool"> Metal Pool</option>
-            <option value="Wooden Pool"> Wooden Pool</option>
-            <option value="Bamboo Pool"> Bamboo Pool</option>
+            <option value="">Select pole </option>
+            <option value="Concrite Square pole"> Concrite Square pole</option>
+            <option value="Concrite Round pole"> Concrite Round pole</option>
+            <option value="Metal pole"> Metal pole</option>
+            <option value="Wooden pole"> Wooden pole</option>
+            <option value="Bamboo pole"> Bamboo pole</option>
           </select>
         </div>
 
         <div className="edit-form-item">
-          <label htmlFor="selectpoolstatus">
-            Select Pool Status<span className="required-symbol">*</span>
+          <label htmlFor="selectpolestatus">
+            Select pole Status<span className="required-symbol">*</span>
           </label>
           <select
-            name="selectpoolstatus"
-            value={editContent.selectpoolstatus}
+            name="selectpolestatus"
+            value={editContent.selectpolestatus}
             required
             onChange={handleChange}
             style={{
@@ -113,7 +113,7 @@ const EditForm = ({
               transition: "border-color 0.3s ease-in-out",
             }}
           >
-            <option value="">Select Pool Status</option>
+            <option value="">Select pole Status</option>
             <option value="In Great Condition"> In Great Condition</option>
             <option value="In Moderate Condition">
               {" "}
@@ -124,12 +124,12 @@ const EditForm = ({
         </div>
 
         <div className="edit-form-item">
-          <label htmlFor="selectpoollocation">
-            Select Pool Location <span className="required-symbol">*</span>
+          <label htmlFor="selectpolelocation">
+            Select pole Location <span className="required-symbol">*</span>
           </label>
           <select
-            name="selectpoollocation"
-            value={editContent.selectpoollocation}
+            name="selectpolelocation"
+            value={editContent.selectpolelocation}
             required
             onChange={handleChange}
             style={{
@@ -140,7 +140,7 @@ const EditForm = ({
               transition: "border-color 0.3s ease-in-out",
             }}
           >
-            <option value="">Select Pool Location</option>
+            <option value="">Select pole Location</option>
             <option value="Near House"> Near House</option>
             <option value="Inside House"> Inside House</option>
             <option value="No House NearBy"> No House NearBy</option>
@@ -169,7 +169,7 @@ const EditForm = ({
         </div>
 
         <div className="edit-form-item">
-          <label htmlFor="image">Pool Image </label>
+          <label htmlFor="image">pole Image </label>
           <input
             type="file"
             name="image"

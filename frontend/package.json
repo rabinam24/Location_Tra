@@ -17,6 +17,7 @@
     "@mui/icons-material": "^5.15.17",
     "@mui/material": "^5.15.17",
     "@mui/styled-engine-sc": "^6.0.0-alpha.18",
+    "@mui/x-charts": "^7.4.0",
     "axios": "^1.6.8",
     "chart.js": "^4.4.2",
     "chartjs-plugin-datalabels": "^2.2.0",
