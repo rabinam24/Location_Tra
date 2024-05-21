@@ -107,16 +107,27 @@ print("Database initialized successfully")
 def submit_user_form():
     if request.method == 'GET':
         data = request.args
+        data2 = data.to_dict()
+        data3 = {
+            "empty": "nothing in here"
+        }
+        combined = {**data2,**data3}
+        return jsonify(combined)
+        # return jsonify(data)
         # location =  request.args.get('location')
 
         return data
    
     elif request.method == 'POST':
         form_data = request.json
+        test_data2= request.get_json()
         location = form_data.get('location')
         gpslocation = form_data.get('gpslocation')
+        test1 = test_data2.get('location')
+        test2 = test_data2.get('gpslocation')
         print(location,gpslocation)
-        return "hahahha"
+        return jsonify({"location":f"{test1}","gpslocation":f"{test2}"})
+        # return "hahahha"
 
     
 
