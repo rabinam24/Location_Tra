@@ -28,6 +28,7 @@ const Form = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    //Custom Validation for GPS location
     setUserInfo((prevUserInfo) => ({
       ...prevUserInfo,
       [name]: value,
@@ -62,6 +63,28 @@ const Form = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Split the gpslocation value by comma
+    const gpsLocationValues = userInfo.gpslocation.split(",");
+    // Check if there are exactly two values after splitting
+    if (gpsLocationValues.length !== 2) {
+      // If the number of values is not two, show an alert
+      alert('Please enter GPS location values separated by a comma.');
+    return;
+    }
+
+    // Trim and parse the latitude and longitude values
+    const latitude = parseFloat(gpsLocationValues[0].trim());
+    const longitude = parseFloat(gpsLocationValues[1].trim());
+
+    // Check if both latitude and longitude are valid float values
+    if (isNaN(latitude) || isNaN(longitude)) {
+      // If any value is not a valid float value, show an alert
+      alert('Please enter valid latitude and longitude values separated by a comma.');
+      return;
+  }
+
+
     try {
       const response = await fetch('http://127.0.0.1:5000/submit-user-form', {
         method: 'POST',
