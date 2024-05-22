@@ -126,6 +126,20 @@ def submit_user_form():
         test1 = test_data2.get('location')
         test2 = test_data2.get('gpslocation')
         print(location,gpslocation)
+        print(type(gpslocation))
+        latitude = gpslocation.split(',')[0]
+        longitude = gpslocation.split(',')[1]
+        print(latitude)
+        print(longitude)
+        # before typecasting
+        print(type(latitude))
+        print(type(longitude))
+        latitude_float = float(latitude)
+        longitude_float = float(longitude)
+        print(latitude_float)
+        print(longitude_float)
+        print(type(latitude_float))
+        print(type(longitude_float))
         return jsonify({"location":f"{test1}","gpslocation":f"{test2}","description":"empty"})
         # return "hahahha"
 
