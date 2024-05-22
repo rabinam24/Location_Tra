@@ -83,8 +83,12 @@ const Form = () => {
       alert('Please enter valid latitude and longitude values separated by a comma.');
       return;
   }
-
-
+  
+  
+  // Check if latitude and longitude are within the specified range for Nepal
+  // Nepal's coordinate is : Latitude:26.3475° N to 30.4474° N , Longitude:80.0580° E to 88.2015° E 
+  if(latitude >= 26.3475 && latitude <= 30.4474 && longitude >= 80.0580 && longitude <= 88.2015)
+  {
     try {
       const response = await fetch('http://127.0.0.1:5000/submit-user-form', {
         method: 'POST',
@@ -103,6 +107,14 @@ const Form = () => {
     } catch (error) {
       console.error('Error:', error);
     }
+  }
+  else
+  {
+    // Show an alert if latitude or longitude is out of range for Nepal
+    alert('Latitude and longitude values are out of range for Nepal.\nFor Latitude:\nInsert values between:26.3475° N to 30.4474° N\nFor Longitude:\nInsert values between 80.0580° E to 88.2015° E'); 
+  }
+  
+  
   };
   
 
