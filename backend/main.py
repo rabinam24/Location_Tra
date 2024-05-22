@@ -6,10 +6,19 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from models import UserForm, db
 
+from wtforms import Form,StringField,FloatField
 
 app = Flask(__name__)
 
 CORS(app)  # Enable CORS for all routes
+
+
+class submitForm(Form):
+    form_location = StringField('Location')
+    form_latitude = FloatField('Latitude')
+    form_longitude = FloatField('longitude')
+
+
 
 @app.route('/')
 def hello_world():
@@ -140,7 +149,30 @@ def submit_user_form():
         print(longitude_float)
         print(type(latitude_float))
         print(type(longitude_float))
-        return jsonify({"location":f"{test1}","gpslocation":f"{test2}","description":"empty"})
+        submit_location: str = location
+        submit_latitude: float = latitude_float
+        submit_longitude: float = longitude_float
+
+        submit_data = {
+            'location':submit_location,
+            'latitude':submit_latitude,
+            'longitude':submit_longitude
+        }
+
+
+        form_object = submitForm(data=submit_data)
+
+        if form_object.validate():
+            print("form submission successful")
+            return jsonify({"form_submission_success":True,"location":submit_data['location'],"latitude":submit_data['latitude'],"longitude":submit_data['longitude']}),200
+        else:
+            all_errors = {field: error[0] for field, error in form_object.errors.items()}
+            print("form submission not successful")
+            return jsonify({"form_submission_success":False,"errors":all_errors}), 400
+        
+
+        # commenting the below code for now
+        # return jsonify({"location":f"{test1}","gpslocation":f"{test2}","description":"empty"})
         # return "hahahha"
 
     
