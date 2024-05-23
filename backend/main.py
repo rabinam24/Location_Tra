@@ -1,7 +1,7 @@
 # from flask import Flask
 
 from flask import Flask, request, jsonify
-
+from datetime import datetime
 
 from flask_cors import CORS
 from models import UserForm, db
@@ -175,7 +175,23 @@ def submit_user_form():
         # return jsonify({"location":f"{test1}","gpslocation":f"{test2}","description":"empty"})
         # return "hahahha"
 
-    
+
+@app.route('/start_trip',methods=['POST'])
+def start_trip():
+     # Assuming the frontend sends the current user's name
+    # current_user = request.json.get('current_user')
+    # Get the current time as the trip start time
+    start_time = datetime.now()
+    print(start_time)
+    # Return the trip start time as a response
+    start_time_formatted = start_time.strftime('%Y-%m-%d %H:%M:%S')
+    print(start_time_formatted)
+    print(f"started : True, startTime: {start_time_formatted}")
+    return jsonify({'started': True, 'startTime': start_time_formatted})
+
+
+
+
 
 print(app.url_map)
 if __name__ == '__main__':

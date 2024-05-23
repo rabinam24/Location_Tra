@@ -9,11 +9,30 @@ function NewLanding() {
   const [showAddTravelLogButton, setShowAddTravelLogButton] = useState(false);
   const intervalIdRef = useRef(null);
 
-  const handleClick = () => {
+  const handleClick = async() => {
     const currentuser = "Rabinam";
-    const currenttime = new Date();
-    setTrip({ started: true, startTime: currenttime });
-    setShowAddTravelLogButton(true);
+    // const currenttime = new Date();
+    // setTrip({ started: true, startTime: currenttime });
+    // setShowAddTravelLogButton(true);
+    try {
+      const response = await fetch('http://127.0.0.1:5000/start_trip', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        // body: JSON.stringify({ current_user: currentuser })
+        body: JSON.stringify({ current_user: currentuser })
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setTrip({ started: data.started, startTime: data.startTime });
+        setShowAddTravelLogButton(true);
+      } else {
+        console.error('Failed to start trip');
+      }
+    } catch (error) {
+      console.error('Error starting trip:', error);
+    }    
   };
 
   const handleStopClick = () => {
@@ -30,7 +49,8 @@ function NewLanding() {
         // Update the state with the current elapsed time
         setTrip((prevTrip) => ({
           ...prevTrip,
-          elapsedTime: new Date() - prevTrip.startTime,
+          // elapsedTime: new Date() - prevTrip.startTime,
+          elapsedTime: new Date() - new Date(prevTrip.startTime),
         }));
       }, 1000);
     }
@@ -68,11 +88,23 @@ function NewLanding() {
               <p className="text-xl" style={{ marginTop: "10px" }}>
                 Trip started at:{" "}
                 <span className="font-bold">
-                  {trip.elapsedTime
+                  {/*{trip.elapsedTime
                     ? formatElapsedTime(trip.elapsedTime)
-                    : "00:00:00"}
+                    : "00:00:00"}*/}
+                  {trip.startTime ? new Date(trip.startTime).toLocaleString() : "Loading..."}
                 </span>
               </p>
+              {/* Display the elapsed time if the trip has started */}
+              {trip.started && (
+                <p className="text-xl" style={{ marginTop: "10px" }}>
+                  Elapsed time since trip started:{" "}
+                  <span className="font-bold">
+                    {trip.elapsedTime
+                      ? formatElapsedTime(trip.elapsedTime)
+                      : "00:00:00"}
+                  </span>
+                </p>
+              )}
               <Grid>
                 <HorizontalBars />
               </Grid>
