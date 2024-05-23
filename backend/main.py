@@ -131,9 +131,12 @@ def submit_user_form():
         form_data = request.json
         test_data2= request.get_json()
         location = form_data.get('location')
-        gpslocation = form_data.get('gpslocation')
+        gpslocation = form_data.get('gpslocation').replace(" ","")
         test1 = test_data2.get('location')
         test2 = test_data2.get('gpslocation')
+         # Validate GPS location format
+        if gpslocation.count(',') != 1:
+            return jsonify({"error": "GPS location must contain exactly two float values separated by a comma"}), 400
         print(location,gpslocation)
         print(type(gpslocation))
         latitude = gpslocation.split(',')[0]
@@ -143,8 +146,11 @@ def submit_user_form():
         # before typecasting
         print(type(latitude))
         print(type(longitude))
-        latitude_float = float(latitude)
-        longitude_float = float(longitude)
+        try:
+            latitude_float = float(latitude)
+            longitude_float = float(longitude)
+        except ValueError:
+            return jsonify({"error": "Latitude and longitude must be float values"}), 400    
         print(latitude_float)
         print(longitude_float)
         print(type(latitude_float))
