@@ -104,7 +104,7 @@ print("Database initialized successfully")
 # @app.route('/bibash')
 # def bibash():
 #     return 'Bibash Acharya'
-7
+
 
 # @app.route('/form2',methods=['POST'])
 # def form2():
@@ -150,7 +150,15 @@ def submit_user_form():
             latitude_float = float(latitude)
             longitude_float = float(longitude)
         except ValueError:
-            return jsonify({"error": "Latitude and longitude must be float values"}), 400    
+            return jsonify({"error": "Latitude and longitude must be float values"}), 400
+
+        # Check if the Latitude and Longitude values are in between the Range for Nepal
+        # The latitude and longitude range for Nepal is approximately:
+        # Latitude: 26.3475° N to 30.4474° N
+        # Longitude: 80.0580° E to 88.2015° E
+        if not (26.3475 <= latitude_float <= 30.4474 and 80.0580 <= longitude_float <= 88.2015):
+            return jsonify({"error": "Latitude and Longitude values must be within the range for Nepal"}), 400
+
         print(latitude_float)
         print(longitude_float)
         print(type(latitude_float))
