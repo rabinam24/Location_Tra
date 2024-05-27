@@ -6,7 +6,7 @@ Location tracker
 ## a) Setup for the Flask Server
 * cd backend
 * install virtual environment using:```python -m venv .venv```
-* Activate the virtual environment using:```.venv/Scripts/Activate```> (for Windows Users) or ```source .venv/bin/activate```> (for MacOS Users) 
+* Activate the virtual environment using:```.venv/Scripts/Activate``` > (for Windows Users) or ```source .venv/bin/activate``` > (for MacOS Users) 
 * install packages using:```pip3 install -r requirements.txt``` or ```pip install -r requirements.txt```
 * Run:```flask --app main run``` to run the main.py file in flask
 ## b) Setup for Node Server
@@ -34,6 +34,6 @@ def serve_static(path):
 ``` 
 * make sure to place this route after other routes in **app.py** of backend folder
 
-## NodeJS version Used: v20.12.2
-## Flask verion Used: v3.0.3
+## `NodeJS` version Used: v20.12.2
+## `Flask` verion Used: v3.0.3
 ## for avoiding Version and Dependecy conflict in this appliacation, set Dependabot alert in Github Repository, Use Docker for Application Dockerization
