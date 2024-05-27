@@ -25,7 +25,7 @@ Location tracker
   "proxy": "http://localhost:5000"
 }
 ```
-* To deploy combined React and Flask application, run this command: ```npm run build``  
+* To deploy combined React and Flask application, run this command: ```npm run build``` 
 * In the **main.py** of **backend** directory which contains code for Flask appliation, add the following:
 ```
 from flask import send_file
