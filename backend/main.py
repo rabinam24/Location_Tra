@@ -151,6 +151,17 @@ def submit_user_form():
             longitude_float = float(longitude)
         except ValueError:
             return jsonify({"error": "Latitude and longitude must be float values"}), 400
+        
+        selectpole = form_data.get('selectpole')
+        print(selectpole)
+        selectpolestatus = form_data.get('selectpolestatus')
+        print(selectpolestatus)
+        selectpolelocation = form_data.get('selectpolelocation')
+        print(selectpolelocation)
+        description = form_data.get('description')
+        print(description)
+        availableisp = form_data.get('availableisp')
+        print(availableisp)
 
         # Check if the Latitude and Longitude values are in between the Range for Nepal
         # The latitude and longitude range for Nepal is approximately:
