@@ -19,6 +19,8 @@ Location tracker
 * run the project using npm run start
 * it is always recommended to start the Flask Server before Node Server
 ## For Serving React Static Files in Flask
+* `Proxying API Requests from React to Flask`
+* By default, React's development server runs on port 3000, and Flask might run on a different port. To avoid CORS issues during development, we can proxy API requests from React to Flask
 * In **package.json** file of **frontend** directory which contains code for React appliacation, add the following configuation:
 ```
 {
@@ -26,6 +28,7 @@ Location tracker
 }
 ```
 * To deploy combined React and Flask application, run this command: ```npm run build``` 
+* above step will create production build of React frontend app and the React App will build into the build directory
 * In the **main.py** of **backend** directory which contains code for Flask appliation, add the following:
 ```
 from flask import send_file
