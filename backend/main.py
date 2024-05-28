@@ -13,6 +13,9 @@ app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
 
 
+from flask import send_file,send_from_directory
+from werkzeug.utils import safe_join
+
 class submitForm(Form):
     form_location = StringField('Location')
     form_latitude = FloatField('Latitude')
@@ -22,6 +25,9 @@ class submitForm(Form):
 
 @app.route('/')
 def hello_world():
+    directory = 'buildStaticReactVite'
+    full_path = safe_join(directory,'hello')
+    print(full_path)
     return 'Hello from backend!'
 
 # if __name__ == '__main__':
@@ -216,6 +222,11 @@ def start_trip():
 
 
 
+
+
+@app.route('/static/<path:pathLocation>')
+def serve_static(pathLocation):
+    return send_file(f'buildStaticReactVite/{pathLocation}')
 
 
 print(app.url_map)
