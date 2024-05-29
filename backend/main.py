@@ -8,6 +8,9 @@ from models import UserForm, db
 
 from wtforms import Form,StringField,FloatField
 
+from werkzeug.utils import secure_filename
+import os
+
 app = Flask(__name__)
 
 CORS(app)  # Enable CORS for all routes
@@ -30,6 +33,10 @@ def hello_world():
     print(full_path)
     return 'Hello from backend!'
 
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in {'jpg', 'jpeg', 'png', 'gif'}
+
+
 # if __name__ == '__main__':
 #     app.run(debug=True)
 
@@ -47,6 +54,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:acharya@localhost
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)  # Initialize database
 print("Database initialized successfully")
+app.config['UPLOAD_FOLDER'] = 'uploads'
 
 # @app.route('/submit-user-form', methods=['POST'])
 # @app.route('/form2',methods=['GET'])
@@ -134,12 +142,15 @@ def submit_user_form():
         return data
    
     elif request.method == 'POST':
-        form_data = request.json
-        test_data2= request.get_json()
+        form_data = request.form
+        # files = request.files['poleimage']
+        files = request.files.getlist('poleimage')
+        form_data = request.json 
+        # test_data2= request.get_json()
         location = form_data.get('location')
         gpslocation = form_data.get('gpslocation').replace(" ","")
-        test1 = test_data2.get('location')
-        test2 = test_data2.get('gpslocation')
+        # test1 = test_data2.get('location')
+        # test2 = test_data2.get('gpslocation')
          # Validate GPS location format
         if gpslocation.count(',') != 1:
             return jsonify({"error": "GPS location must contain exactly two float values separated by a comma"}), 400
@@ -168,6 +179,25 @@ def submit_user_form():
         print(description)
         availableisp = form_data.get('availableisp')
         print(availableisp)
+
+        # Save the uploaded files
+        saved_files = []
+        if isinstance(files, list):
+            for file in files:
+                if file and allowed_file(file.filename):
+                    filename = secure_filename(file.filename)
+        else:
+            # Handle the case where only one file is uploaded
+            single_file = files
+            if single_file and allowed_file(single_file.filename):
+                filename = secure_filename(single_file.filename)
+        
+        # for file in files:
+        #     if file and allowed_file(file.filename):
+        #         filename = secure_filename(file.filename)
+        #         file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        #         file.save(file_path)
+        #         saved_files.append(file_path)
 
         # Check if the Latitude and Longitude values are in between the Range for Nepal
         # The latitude and longitude range for Nepal is approximately:
@@ -224,11 +254,16 @@ def start_trip():
 
 
 
-@app.route('/static/<path:pathLocation>')
-def serve_static(pathLocation):
-    return send_file(f'buildStaticReactVite/{pathLocation}')
+# @app.route('/static/<path:pathLocation>')
+# def serve_static(pathLocation):
+#     return send_file(f'buildStaticReactVite/{pathLocation}')
 
 
 print(app.url_map)
 if __name__ == '__main__':
+    print("This must be either True or False",os.path.exists('dummy'))
+    if not os.path.exists(app.config['UPLOAD_FOLDER']):
+        os.makedirs(app.config['UPLOAD_FOLDER'])
+    if not os.path.exists('dummy'):
+        os.makedirs('dummy')
     app.run(debug=True)

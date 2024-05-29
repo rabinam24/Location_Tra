@@ -28,6 +28,7 @@ const Form = () => {
     selectpolestatus: "",
     selectpolelocation: "",
     description: "",
+    // poleimage: null,
     poleimage: "",
     availableisp: "",
     selectisp: "",
@@ -39,12 +40,24 @@ const Form = () => {
   const [showUserData, setShowUserData] = useState(false);
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value,files } = e.target;
     //Custom Validation for GPS location
-    setUserInfo((prevUserInfo) => ({
-      ...prevUserInfo,
-      [name]: value,
-    }));
+
+    // setUserInfo((prevUserInfo) => ({
+    //   ...prevUserInfo,
+    //   [name]: value,
+    // }));
+    if (name === "poleimage") { // Check if the changed field is poleimage
+      setUserInfo((prevUserInfo) => ({
+        ...prevUserInfo,
+        poleimage: files[0], // Update poleimage with the selected file
+      }));
+    } else {
+      setUserInfo((prevUserInfo) => ({
+        ...prevUserInfo,
+        [name]: value,
+      }));
+    }
   };
 
   const handleSliderImages = (e) => {
@@ -102,12 +115,20 @@ const Form = () => {
   if(latitude >= 26.3475 && latitude <= 30.4474 && longitude >= 80.0580 && longitude <= 88.2015)
   {
     try {
+      const formData  = new FormData();
+      Object.keys(userInfo).forEach((key) => {
+        formData.append(key, userInfo[key]);
+      });
+      for (const [key2, value2] of formData.entries()) {
+        console.log(`Key: ${key2}, Value: ${value2}`);
+      }
       const response = await fetch('http://127.0.0.1:5000/submit-user-form', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(userInfo), // Send user input data
+        method: 'POST',// Send user input data
+        // headers: {
+        //   'Content-Type': 'application/json',
+        // },
+        body : formData,
+        // body: JSON.stringify(userInfo), // Send user input data
       });
       if (response.ok) {
         // Handle successful submission (e.g., show a success message)
@@ -306,8 +327,9 @@ const Form = () => {
 
           <input
             type="file"
-            name="image"
+            name="poleimage"
             accept="image/*"
+            // value={userInfo.poleimage}
             onChange={handleChange}
             style={{ margin: "8px 0" }}
           />
