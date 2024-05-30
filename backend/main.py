@@ -1,4 +1,5 @@
 # from flask import Flask
+from PIL import Image
 
 from flask import Flask, request, jsonify
 from datetime import datetime
@@ -14,6 +15,8 @@ import os
 app = Flask(__name__)
 
 CORS(app)  # Enable CORS for all routes
+# CORS(app, origins='http://localhost:5173')  # Allow requests only from http://localhost:5173
+
 
 
 from flask import send_file,send_from_directory
@@ -143,12 +146,13 @@ def submit_user_form():
    
     elif request.method == 'POST':
         form_data = request.form
+        # form_data = request.json
         # files = request.files['poleimage']
-        files = request.files.getlist('poleimage')
-        form_data = request.json 
+        # files = request.files.getlist('poleimage')
         # test_data2= request.get_json()
         location = form_data.get('location')
         gpslocation = form_data.get('gpslocation').replace(" ","")
+        print("Form Data:", form_data)
         # test1 = test_data2.get('location')
         # test2 = test_data2.get('gpslocation')
          # Validate GPS location format
@@ -179,18 +183,33 @@ def submit_user_form():
         print(description)
         availableisp = form_data.get('availableisp')
         print(availableisp)
+        
+        if 'poleimage' in request.files:
+            print("yes there is electricPole.jpg")
+            print(type(request.files))
+            print(type(request.files['poleimage']))
+            
+        else:
+            print("no electricPOle.jpg")
+
 
         # Save the uploaded files
-        saved_files = []
-        if isinstance(files, list):
-            for file in files:
-                if file and allowed_file(file.filename):
-                    filename = secure_filename(file.filename)
-        else:
-            # Handle the case where only one file is uploaded
-            single_file = files
-            if single_file and allowed_file(single_file.filename):
-                filename = secure_filename(single_file.filename)
+        # saved_files = []
+        # if isinstance(files, list):
+        #     for file in files:
+        #         if file and allowed_file(file.filename):
+        #             filename = secure_filename(file.filename)
+        #             file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        #             file.save(file_path)
+        #             saved_files.append(file_path)
+        # else:
+        #     # Handle the case where only one file is uploaded
+        #     single_file = files
+        #     if single_file and allowed_file(single_file.filename):
+        #         filename = secure_filename(single_file.filename)
+        #             file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        #             file.save(file_path)
+        #             saved_files.append(file_path)
         
         # for file in files:
         #     if file and allowed_file(file.filename):
@@ -198,6 +217,12 @@ def submit_user_form():
         #         file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         #         file.save(file_path)
         #         saved_files.append(file_path)
+        # filename = "rgb.jpg"
+        # directory = 'dummy'
+        # img = Image.new('RGB', (100, 100), color = 'red')
+        # file_path = os.path.join(directory, filename)
+        # img.save(file_path)
+
 
         # Check if the Latitude and Longitude values are in between the Range for Nepal
         # The latitude and longitude range for Nepal is approximately:
