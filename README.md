@@ -9,6 +9,7 @@ Location tracker
 * Activate the virtual environment using:```.venv/Scripts/Activate```(for Windows Users) or ```source .venv/bin/activate```(for MacOS Users) 
 * install packages using:```pip3 install -r requirements.txt``` or ```pip install -r requirements.txt```
 * Run:```flask --app main run``` to run the main.py file in flask
+* Or Run : ```python main.py``` to run the main.py file in python
 ## b) Setup for Node Server
 * cd frontend
 * install dependencies using: ```npm install --force```
