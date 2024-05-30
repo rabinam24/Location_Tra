@@ -1,5 +1,4 @@
 import React from "react";
-import Form from "../components/FormInput";
 import List from "../components/ListInfo";
 
 const Home = ({
@@ -13,18 +12,14 @@ const Home = ({
   return (
     <div>
       <List
-        userInfo={userInfo} // Make sure userInfo is passed here
+        userInfo={userInfo} 
         setUserInfo={setUserInfo}
         allInfo={allInfo}
         setAllInfo={setAllInfo}
-      />
-      {/* <List
-        userInfo={userInfo}
-        allInfo={allInfo}
-        setAllInfo={setAllInfo}
-        editContent={editContent}
         setEditContent={setEditContent}
-      /> */}
+        editContent={editContent}
+      />
+     
     </div>
   );
 };

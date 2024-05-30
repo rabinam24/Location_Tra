@@ -1,53 +1,79 @@
 import "../styles.css";
 import "leaflet/dist/leaflet.css";
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
-import MarkerClusterGroup from "react-leaflet-cluster";
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+import { MapContainer, TileLayer, Marker, Polyline } from "react-leaflet";
 
-import { Icon, divIcon, point } from "leaflet";
-import placeholderImage from '../assets/placeholder.png'; 
+const MapWithMarkers = () => {
+  const [gpsData, setGPSData] = useState([]);
+  const [userPath, setUserPath] = useState([]);
+  
+  // Define socket variable within component scope
+  let socket;
 
-// Corrected custom icon definition with direct URL
-const customIcon = new Icon({
-  iconUrl: placeholderImage, // Corrected to direct URL
-  iconSize: [38, 38] // size of the icon
-});
+  useEffect(() => {
+    // Establish WebSocket connection
+    const socket = new WebSocket('ws://localhost:8080/ws');
+    console.log(socket);
+  
+    // Event listener for when the WebSocket connection is open
+    socket.addEventListener('open', () => {
+      console.log('WebSocket connection established');
+      
+      // Listen for messages from the WebSocket server
+      socket.onmessage = (event) => {
+        const newLocation = JSON.parse(event.data);
+        setGPSData((prevData) => [...prevData, newLocation]);
+      };
+  
+      // Clean up function to close the WebSocket connection
+      return () => {
+        console.log('Closing WebSocket connection');
+        socket.close();
+      };
+    });
+  
+    // Track the user's live position
+    if (navigator.geolocation) {
+      const watchId = navigator.geolocation.watchPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          const newUserPath = [latitude, longitude];
+          setUserPath((prevPath) => [...prevPath, newUserPath]);
+  
+          // Check if socket is open before sending data
+          if (socket.readyState === WebSocket.OPEN) {
+            socket.send(JSON.stringify({ latitude, longitude }));
+          }
+        },
+        (error) => {
+          console.error("Error watching position:", error);
+        },
+        {
+          enableHighAccuracy: true,
+          maximumAge: 0,
+          timeout: 5000,
+        }
+      );
+  
+      return () => navigator.geolocation.clearWatch(watchId);
+    } else {
+      console.error("Geolocation is not supported by this browser.");
+    }
+  }, []);
+  
 
-// custom cluster icon
-const createClusterCustomIcon = function (cluster) {
-  return new divIcon({
-    html: `<span class="cluster-icon">${cluster.getChildCount()}</span>`,
-    className: "custom-marker-cluster",
-    iconSize: point(38, 38, true)
-  });
+
+
+  return (
+    <MapContainer center={[27.6714893, 85.3120526]} zoom={12} style={{ height: "400px", margin: "10px 0" }}>
+      <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+      {gpsData.map((location, index) => (
+        <Marker key={index} position={[location.latitude, location.longitude]} />
+      ))}
+      <Polyline positions={userPath} />
+    </MapContainer>
+  );
 };
 
-// markers
-const markers = [
-  {
-    geocode: [27.6588, 85.3247],
-  }
-];
-
-export default function MapComponents() {
-  return (
-    <div className="map-container">
-      <MapContainer center={[27.6588, 85.3247]} zoom={14} style={{ width: '100%', height: '100%' }}>
-        {/* OPEN STREEN MAPS TILES */}
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
-        <MarkerClusterGroup
-          chunkedLoading
-          iconCreateFunction={createClusterCustomIcon}
-        >
-          {/* Mapping through the markers */}
-          {markers.map((marker, index) => (
-            <Marker key={index} position={marker.geocode} icon={customIcon}>
-            </Marker>
-          ))}
-        </MarkerClusterGroup>
-      </MapContainer>
-    </div>
-  );
-}
+export default MapWithMarkers;

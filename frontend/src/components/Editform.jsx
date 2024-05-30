@@ -1,25 +1,19 @@
-import React from "react";
 
-const EditForm = ({
-  allInfo,
-  editContent,
-  setEdit,
-  setAllInfo,
-  setEditContent,
-  edit,
-}) => {
+import React, { useState } from 'react';
+
+const EditForm = ({ editContent, setEditContent, setEdit, allInfo, setAllInfo }) => {
+  const [formContent, setFormContent] = useState(editContent);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setEditContent((prevContent) => ({ ...prevContent, [name]: value }));
+    setFormContent((prevContent) => ({ ...prevContent, [name]: value }));
   };
 
-  const handleEdit = () => {
-    const updatedInfo = allInfo.map((info) => {
-      if (info.id === editContent.id) {
-        return editContent;
-      }
-      return info;
-    });
+  const handleEdit = (e) => {
+    e.preventDefault();
+    const updatedInfo = allInfo.map((info) =>
+      info.id === formContent.id ? formContent : info
+    );
     setAllInfo(updatedInfo);
     setEdit(false);
   };
