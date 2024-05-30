@@ -183,12 +183,20 @@ def submit_user_form():
         print(description)
         availableisp = form_data.get('availableisp')
         print(availableisp)
+        saved_files = []
         
         if 'poleimage' in request.files:
             print("yes there is electricPole.jpg")
             print(type(request.files))
             print(type(request.files['poleimage']))
-            
+            poleimage = request.files['poleimage']
+            filename = poleimage.filename
+            content_type = poleimage.content_type
+            print(filename,type(filename))
+            print(content_type,type(content_type))
+            directory = 'dummy'
+            file_path = os.path.join(directory, filename)
+            poleimage.save(file_path)
         else:
             print("no electricPOle.jpg")
 
