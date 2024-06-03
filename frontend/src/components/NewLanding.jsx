@@ -206,7 +206,7 @@ function NewLanding() {
 
               {showAddTravelLogButton && <Form />}
 
-              {/* <MapWithMarkers /> */}
+              <MapWithMarkers />
               {/* <ImageGallery /> */}
             </>
           )}

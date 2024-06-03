@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/gorilla/websocket"
 	_ "github.com/lib/pq"
 )
 
@@ -46,38 +47,38 @@ const (
 	dbname   = "binam"
 )
 
-// var upgrader = websocket.Upgrader{
-// 	CheckOrigin: func(r *http.Request) bool {
-// 		return true
-// 	},
-// }
+var upgrader = websocket.Upgrader{
+	CheckOrigin: func(r *http.Request) bool {
+		return true
+	},
+}
 
-// func handleWebSocketConnections(w http.ResponseWriter, r *http.Request) {
-// 	conn, err := upgrader.Upgrade(w, r, nil)
-// 	if err != nil {
-// 		log.Println("Error upgrading the web socket connection:", err)
-// 		return
-// 	}
-// 	defer conn.Close()
+func handleWebSocketConnections(w http.ResponseWriter, r *http.Request) {
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Println("Error upgrading the web socket connection:", err)
+		return
+	}
+	defer conn.Close()
 
-// 	//Loop to handle incoming web Socket message
-// 	for {
-// 		_, message, err := conn.ReadMessage()
-// 		if err != nil {
-// 			log.Println("Error reading the message from the websocket:", err)
-// 			break
-// 		}
-// 		fmt.Printf("Received message from the client: %s\n", message)
+	//Loop to handle incoming web Socket message
+	for {
+		_, message, err := conn.ReadMessage()
+		if err != nil {
+			log.Println("Error reading the message from the websocket:", err)
+			break
+		}
+		fmt.Printf("Received message from the client: %s\n", message)
 
-// 		// Echo message back to the client
-// 		err = conn.WriteMessage(websocket.TextMessage, message)
-// 		if err != nil {
-// 			log.Println("Error writing the message to the  websocket:", err)
-// 			break
-// 		}
-// 	}
+		// Echo message back to the client
+		err = conn.WriteMessage(websocket.TextMessage, message)
+		if err != nil {
+			log.Println("Error writing the message to the  websocket:", err)
+			break
+		}
+	}
 
-// }
+}
 
 func insertData(db *sql.DB, formData FormData) error {
 	query := `
@@ -316,7 +317,7 @@ func main() {
 
 	db, err := connectDB(cfg)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("Error connecting to the database:", err)
 	}
 	defer db.Close()
 
@@ -325,7 +326,7 @@ func main() {
 	http.HandleFunc("/api/data/", handleDeleteData(db))
 	http.HandleFunc("/api/gps-data", handlegetGpsData(db))
 	http.HandleFunc("/api/pole-image", handleUserPoleImage(db))
-	// http.HandleFunc("/ws", handleWebSocketConnections)
+	http.HandleFunc("/ws", handleWebSocketConnections)
 
 	corsMiddleware := func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -343,10 +344,9 @@ func main() {
 	}
 
 	handler := corsMiddleware(http.DefaultServeMux)
-	// go handleMessages(db)
 
 	fmt.Println("Server is running on :8080")
 	if err := http.ListenAndServe(":8080", handler); err != nil {
-		log.Fatal(err)
+		log.Fatal("Error starting server:", err)
 	}
 }
