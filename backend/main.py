@@ -253,7 +253,8 @@ def submit_user_form():
         print(type(latitude_float))
         print(type(longitude_float))
         with open(file_path,'rb') as image_file:
-            encoded_string = base64.b64encode(image_file.read())
+            encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
+            print(encoded_string)
             # print(encoded_string)
         submit_location: str = location
         submit_latitude: float = latitude_float
