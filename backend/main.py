@@ -1,6 +1,8 @@
 # from flask import Flask
 import base64
 from PIL import Image
+# from collections import OrderedDict
+from collections import OrderedDict
 
 from flask import Flask, request, jsonify
 from datetime import datetime
@@ -8,7 +10,7 @@ from datetime import datetime
 from flask_cors import CORS
 from models import UserForm, db
 
-from wtforms import Form,StringField,FloatField
+from wtforms import Form,StringField,FloatField,FileField
 
 from werkzeug.utils import secure_filename
 import os
@@ -27,6 +29,12 @@ class submitForm(Form):
     form_location = StringField('Location')
     form_latitude = FloatField('Latitude')
     form_longitude = FloatField('longitude')
+    form_selectpole = StringField('SelectPole')
+    form_selectpolestatus = StringField('SelectPoleStatus')
+    form_selectlocation = StringField('SelectPoleLocation')
+    form_description = StringField('Description')
+    form_poleimage = FileField('selectpoleimage')
+
 
 
 
@@ -244,25 +252,58 @@ def submit_user_form():
         print(longitude_float)
         print(type(latitude_float))
         print(type(longitude_float))
+        with open(file_path,'rb') as image_file:
+            encoded_string = base64.b64encode(image_file.read())
+            # print(encoded_string)
         submit_location: str = location
         submit_latitude: float = latitude_float
         submit_longitude: float = longitude_float
+        submit_selectpole: str = selectpole
+        submit_selectpolestatus: str = selectpolestatus
+        submit_selectpolelocation: str = selectpolelocation
+        submit_description: str = description
+        submit_poleimage: str = str(encoded_string)
+        submit_poleimagename: str = str(filename)
 
         submit_data = {
             'location':submit_location,
             'latitude':submit_latitude,
-            'longitude':submit_longitude
+            'longitude':submit_longitude,
+            'selectpole':submit_selectpole,
+            'selectpolestatus':submit_selectpolestatus,
+            'selectpolelocation':submit_selectpolelocation,
+            'description':submit_description,
+            'poleimage':submit_poleimage,
+            'poleimagename':submit_poleimagename
         }
 
 
         form_object = submitForm(data=submit_data)
-        with open(file_path,'rb') as image_file:
-            encoded_string = base64.b64encode(image_file.read())
-            # print(encoded_string)
 
         if form_object.validate():
             print("form submission successful")
-            return jsonify({"form_submission_success":True,"location":submit_data['location'],"latitude":submit_data['latitude'],"longitude":submit_data['longitude'],"poleimage":str(encoded_string),"poleimagename":str(filename)}),200
+            print("yahoo!")
+            unordered_data = {"form_submission_success":True,"selectpole":selectpole,"selectpolestatus":selectpolestatus,"location":submit_data['location'],"latitude":submit_data['latitude'],"longitude":submit_data['longitude'],"description":description,"poleimage":str(encoded_string),"poleimagename":str(filename)}
+
+            response_data = OrderedDict([
+                ("form_submission_success", True),
+                ("location", submit_data['location']),
+                ("latitude", submit_data['latitude']),
+                ("longitude", submit_data['longitude']),
+                ("description", description),
+                ("selectpole", selectpole),
+                ("selectpolestatus", selectpolestatus),
+                ("poleimage", str(encoded_string)),
+                ("poleimagename", str(filename)),
+            ])
+
+            # response_data_sorted = dict(sorted(response_data.items(), key=lambda item: item[0]))
+
+            # return jsonify(response_data_sorted), 200
+
+            return jsonify(dict(response_data)), 200
+
+            # return jsonify(response_data),200
         else:
             all_errors = {field: error[0] for field, error in form_object.errors.items()}
             print("form submission not successful")
