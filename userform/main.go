@@ -46,12 +46,47 @@ const (
 	dbname   = "binam"
 )
 
+// var upgrader = websocket.Upgrader{
+// 	CheckOrigin: func(r *http.Request) bool {
+// 		return true
+// 	},
+// }
+
+// func handleWebSocketConnections(w http.ResponseWriter, r *http.Request) {
+// 	conn, err := upgrader.Upgrade(w, r, nil)
+// 	if err != nil {
+// 		log.Println("Error upgrading the web socket connection:", err)
+// 		return
+// 	}
+// 	defer conn.Close()
+
+// 	//Loop to handle incoming web Socket message
+// 	for {
+// 		_, message, err := conn.ReadMessage()
+// 		if err != nil {
+// 			log.Println("Error reading the message from the websocket:", err)
+// 			break
+// 		}
+// 		fmt.Printf("Received message from the client: %s\n", message)
+
+// 		// Echo message back to the client
+// 		err = conn.WriteMessage(websocket.TextMessage, message)
+// 		if err != nil {
+// 			log.Println("Error writing the message to the  websocket:", err)
+// 			break
+// 		}
+// 	}
+
+// }
+
 func insertData(db *sql.DB, formData FormData) error {
 	query := `
         INSERT INTO userform (location, latitude, longitude, selectpole, selectpolestatus, selectpolelocation, description, poleimage, availableisp, selectisp, multipleimages, created_at)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12);`
 
-	_, err := db.Exec(query, formData.Location, formData.Latitude, formData.Longitude, formData.SelectPole, formData.SelectPoleStatus, formData.SelectPoleLocation, formData.Description, formData.PoleImage, formData.AvailableISP, formData.SelectISP, formData.MultipleImages, time.Now())
+	base64Image := base64.StdEncoding.EncodeToString(formData.PoleImage)
+
+	_, err := db.Exec(query, formData.Location, formData.Latitude, formData.Longitude, formData.SelectPole, formData.SelectPoleStatus, formData.SelectPoleLocation, formData.Description, base64Image, formData.AvailableISP, formData.SelectISP, formData.MultipleImages, time.Now())
 	return err
 }
 
@@ -118,6 +153,7 @@ func handleFormData(db *sql.DB) http.HandlerFunc {
 
 func handleUserData(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		log.Println("Fetching user data...")
 		rows, err := db.Query("SELECT id, location, latitude, longitude, selectpole, selectpolestatus, selectpolelocation, description, poleimage, availableisp, selectisp, multipleimages, created_at FROM userform")
 		if err != nil {
 			log.Printf("Error querying database: %v", err)
@@ -134,6 +170,13 @@ func handleUserData(db *sql.DB) http.HandlerFunc {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
+
+			// Check for NaN values
+			if isInvalidFloat(formData.Latitude) || isInvalidFloat(formData.Longitude) {
+				log.Printf("Invalid latitude or longitude for ID: %d", formData.ID)
+				continue // Skip this entry
+			}
+
 			data = append(data, formData)
 		}
 
@@ -149,6 +192,10 @@ func handleUserData(db *sql.DB) http.HandlerFunc {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
 	}
+}
+
+func isInvalidFloat(value float64) bool {
+	return value != value // NaN check
 }
 
 // i Wanna fetch  the latest image save in the database and I wanna to display it in the frontend ///
@@ -202,15 +249,16 @@ func handleDeleteData(db *sql.DB) http.HandlerFunc {
 
 func handlegetGpsData(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		rows, err := db.Query("SELECT id, latitude, longitude FROM userform")
+		rows, err := db.Query("SELECT id, latitude, longitude FROM gps_data")
 		if err != nil {
-			log.Printf("Error querying database: %v", err)
+			log.Printf("Error querying gps_data: %v", err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 		defer rows.Close()
 
 		var gpsData []map[string]interface{}
+
 		for rows.Next() {
 			var id int
 			var latitude, longitude float64

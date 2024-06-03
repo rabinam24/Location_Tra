@@ -21,6 +21,7 @@ const List = ({ allInfo, setAllInfo, editContent, setEditContent }) => {
     const fetchData = async () => {
       try {
         const response = await axios.get('http://localhost:8080/user-data');
+        console.log(response);
         setAllInfo(response.data);
       } catch (error) {
         console.error('Error fetching user data:', error);
@@ -46,11 +47,11 @@ const List = ({ allInfo, setAllInfo, editContent, setEditContent }) => {
     setSortDirection(sortDirection === "asc" ? "desc" : "asc");
   };
 
-  const toggleEdit = (id) => {
-    const info = allInfo.find((info) => info.id === id);
-    setEditContent(info);
-    setEdit(true);
-  };
+  // const toggleEdit = (id) => {
+  //   const info = allInfo.find((info) => info.id === id);
+  //   setEditContent(info);
+  //   setEdit(true);
+  // };
 
   const handleDelete = async (id) => {
     try {

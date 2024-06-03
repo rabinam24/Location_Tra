@@ -58,9 +58,7 @@ const Form = () => {
       },
       (error) => {
         console.error("Error getting geolocation:", error);
-      
-      },
-      
+      }
     );
   };
 
@@ -78,7 +76,6 @@ const Form = () => {
     }
     console.log("Update slider images", products);
   };
-
 
   // const handleSubmit = async (event) => {
   //   event.preventDefault();
@@ -119,12 +116,11 @@ const Form = () => {
   //   }
   // };
 
-
   const handleSubmit = async (event) => {
     event.preventDefault();
     try {
       const formData = new FormData();
-  
+
       // Append fields to formData
       formData.append("location", userInfo.location);
       formData.append("latitude", parseFloat(userInfo.latitude));
@@ -133,23 +129,23 @@ const Form = () => {
       formData.append("selectpolestatus", userInfo.selectpolestatus);
       formData.append("selectpolelocation", userInfo.selectpolelocation);
       formData.append("description", userInfo.description);
-  
+
       if (userInfo.poleimage) {
         formData.append("poleimage", userInfo.poleimage);
       }
-  
+
       formData.append("availableisp", userInfo.availableisp);
       formData.append("selectisp", userInfo.selectisp);
-  
+
       for (let i = 0; i < userInfo.multipleimages.length; i++) {
         formData.append("multipleimages", userInfo.multipleimages[i]);
       }
-  
+
       // Log the formData content for debugging
       for (let pair of formData.entries()) {
         console.log(pair[0] + ": " + pair[1]);
       }
-  
+
       const response = await axios.post(
         "http://localhost:8080/submit-form",
         formData,
@@ -159,13 +155,13 @@ const Form = () => {
           },
         }
       );
-  
+
       console.log("Data inserted successfully:", response.data);
       setSuccessMessage("Data inserted successfully!");
       setTimeout(() => {
         setSuccessMessage("");
-      }, 1500);
-  
+      }, 2000);
+
       setUserInfo({
         location: "",
         latitude: "",
@@ -183,7 +179,7 @@ const Form = () => {
       console.error("Error inserting data:", error);
     }
   };
-  
+
   const handleAddMore = () => {
     const newAdditionalInfo = {
       selectisp: "",
@@ -209,9 +205,7 @@ const Form = () => {
 
   const handleUserDataClick = () => {
     setShowUserData(!showUserData);
-  }
-
-
+  };
 
   return (
     <div className="input-form text-black">
@@ -297,6 +291,7 @@ const Form = () => {
           </Select>
         </FormControl>
 
+        <FormLabel>Description</FormLabel>
         <TextareaAutosize
           name="description"
           placeholder="Description"
@@ -305,6 +300,7 @@ const Form = () => {
           style={{ margin: "8px 0", minHeight: "100px" }}
         />
 
+        <FormLabel>Pole Image</FormLabel>
         <input
           type="file"
           name="image"
@@ -350,14 +346,6 @@ const Form = () => {
               onChange={handleSliderImages}
               style={{ margin: "8px 0" }}
             />
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={handleAddMore}
-              style={{ margin: "8px 0" }}
-            >
-              Add More
-            </Button>
 
             {additionalInfo.map((info, index) => (
               <div key={index}>
@@ -390,6 +378,15 @@ const Form = () => {
                 />
               </div>
             ))}
+
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={handleAddMore}
+              style={{ margin: "8px 0" }}
+            >
+              Add More
+            </Button>
           </>
         )}
 
@@ -406,28 +403,6 @@ const Form = () => {
         {successMessage && (
           <div style={{ color: "green", textAlign: "center" }}>
             {successMessage}
-          </div>
-        )}
-
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={handleUserDataClick}
-          style={{ margin: "8px 0" }}
-        >
-          User Data
-        </Button>
-
-        {showUserData && (
-          <div>
-            <Home
-              userInfo={userInfo}
-              setUserInfo={setUserInfo}
-              allInfo={allInfo}
-              setAllInfo={setAllInfo}
-              editContent={editContent}
-              setEditContent={setEditContent}
-            />
           </div>
         )}
       </form>

@@ -10,8 +10,8 @@ import Form from "./FormInput";
 import HorizontalBars from "./Dashboard";
 import Home from "../Routes/Homepage";
 import MapWithMarkers from "./MapComponent";
-import PoleImage from "./PoleImage";
-import ImageGallery from "./PoleImage";
+// import PoleImage from "./PoleImage";
+// import ImageGallery from "./PoleImage";
 
 function NewLanding() {
   const [trip, setTrip] = useState({
