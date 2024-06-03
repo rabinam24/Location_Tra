@@ -1,4 +1,5 @@
 # from flask import Flask
+import base64
 from PIL import Image
 
 from flask import Flask, request, jsonify
@@ -255,10 +256,13 @@ def submit_user_form():
 
 
         form_object = submitForm(data=submit_data)
+        with open(file_path,'rb') as image_file:
+            encoded_string = base64.b64encode(image_file.read())
+            # print(encoded_string)
 
         if form_object.validate():
             print("form submission successful")
-            return jsonify({"form_submission_success":True,"location":submit_data['location'],"latitude":submit_data['latitude'],"longitude":submit_data['longitude']}),200
+            return jsonify({"form_submission_success":True,"location":submit_data['location'],"latitude":submit_data['latitude'],"longitude":submit_data['longitude'],"poleimage":str(encoded_string),"poleimagename":str(filename)}),200
         else:
             all_errors = {field: error[0] for field, error in form_object.errors.items()}
             print("form submission not successful")
