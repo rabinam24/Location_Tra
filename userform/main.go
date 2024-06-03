@@ -3,29 +3,18 @@ package main
 import (
 	"context"
 	"database/sql"
+	"encoding/base64"
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
-	"os"
 	"strconv"
 	"time"
 
-	"github.com/gorilla/websocket"
 	_ "github.com/lib/pq"
 )
-
-var clients = make(map[*websocket.Conn]bool) // Connected clients
-var broadcast = make(chan FormData)          // Broadcast channel
-
-// Configure the upgrader
-var upgrader = websocket.Upgrader{
-	CheckOrigin: func(r *http.Request) bool {
-		return true
-	},
-}
 
 type config struct {
 	db struct {
@@ -42,10 +31,10 @@ type FormData struct {
 	SelectPoleStatus   string    `json:"selectpolestatus"`
 	SelectPoleLocation string    `json:"selectpolelocation"`
 	Description        string    `json:"description"`
-	PoleImage          string    `json:"poleimage"`
+	PoleImage          []byte    `json:"poleimage"`
 	AvailableISP       string    `json:"availableisp"`
 	SelectISP          string    `json:"selectisp"`
-	MultipleImages     string    `json:"multipleimages"`
+	MultipleImages     []byte    `json:"multipleimages"`
 	CreatedAt          time.Time `json:"created_at"`
 }
 
@@ -56,44 +45,6 @@ const (
 	password = "Bhandari"
 	dbname   = "binam"
 )
-
-func handleWebSocketConnections(w http.ResponseWriter, r *http.Request) {
-	// Upgrade initial GET request to a WebSocket
-	conn, err := upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-	// Register new client
-	clients[conn] = true
-
-	// Close the connection when the function returns
-	defer conn.Close()
-
-	for {
-		// Listen for new messages from the client
-		var formData FormData
-		if err := conn.ReadJSON(&formData); err != nil {
-			log.Printf("Error reading message: %v", err)
-			delete(clients, conn)
-			break
-		}
-		// Send the received message to the broadcast channel
-		broadcast <- formData
-	}
-}
-
-func handleMessages(db *sql.DB) {
-	for {
-		// Get the next message from the broadcast channel
-		msg := <-broadcast
-		// Handle the received message as needed, such as inserting it into the database
-		if err := insertData(db, msg); err != nil {
-			log.Printf("Error inserting data: %v", err)
-			continue
-		}
-		// You can also perform additional actions with the received message
-	}
-}
 
 func insertData(db *sql.DB, formData FormData) error {
 	query := `
@@ -107,36 +58,54 @@ func insertData(db *sql.DB, formData FormData) error {
 func handleFormData(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var formData FormData
-		if err := json.NewDecoder(r.Body).Decode(&formData); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-
-		// Retrieve the file from form data
-		file, handler, err := r.FormFile("file")
+		err := r.ParseMultipartForm(10 << 20) // Parse multipart form data with a max of 10 MB
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		defer file.Close()
 
-		// Create a new file in the server directory
-		dst, err := os.Create(handler.Filename)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
+		// Retrieve form fields
+		formData.Location = r.FormValue("location")
+		formData.Latitude, _ = strconv.ParseFloat(r.FormValue("latitude"), 64)
+		formData.Longitude, _ = strconv.ParseFloat(r.FormValue("longitude"), 64)
+		formData.SelectPole = r.FormValue("selectpole")
+		formData.SelectPoleStatus = r.FormValue("selectpolestatus")
+		formData.SelectPoleLocation = r.FormValue("selectpolelocation")
+		formData.Description = r.FormValue("description")
+		formData.AvailableISP = r.FormValue("availableisp")
+		formData.SelectISP = r.FormValue("selectisp")
+
+		// Retrieve and save single image
+		file, _, err := r.FormFile("image")
+		if err == nil {
+			defer file.Close()
+			poleImageData, err := ioutil.ReadAll(file)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			formData.PoleImage = poleImageData
 		}
-		defer dst.Close()
 
-		// Copy the uploaded file content to the new file
-		_, err = io.Copy(dst, file)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
+		// Retrieve and save multiple images
+		multipleImages := r.MultipartForm.File["multipleimages"]
+		for _, fileHeader := range multipleImages {
+			file, err := fileHeader.Open()
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			defer file.Close()
+			imageData, err := ioutil.ReadAll(file)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			// Append imageData as an element of formData.MultipleImages
+			formData.MultipleImages = append(formData.MultipleImages, imageData...)
 		}
 
-		fmt.Fprintf(w, "File uploaded successfully: %s", handler.Filename)
-
+		// Insert form data into the database
 		if err := insertData(db, formData); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -185,33 +154,24 @@ func handleUserData(db *sql.DB) http.HandlerFunc {
 // i Wanna fetch  the latest image save in the database and I wanna to display it in the frontend ///
 func handleUserPoleImage(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		rows, err := db.Query("SELECT poleimage FROM userform")
+		// Query to select the latest pole image from the database
+		query := `SELECT poleimage FROM userform ORDER BY created_at DESC LIMIT 1`
+
+		row := db.QueryRow(query)
+		var imageData []byte
+		err := row.Scan(&imageData)
 		if err != nil {
 			log.Printf("Error querying the database: %v", err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		defer rows.Close()
 
-		var image []FormData // Changed to FormData slice
-		for rows.Next() {
-			var imageData FormData // Declare imageData outside the loop
-			if err := rows.Scan(&imageData.PoleImage); err != nil {
-				log.Printf("Error scanning row: %v", err)
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-			image = append(image, imageData) // Append to image slice
-		}
+		// Convert image data to base64 encoding
+		base64Image := base64.StdEncoding.EncodeToString(imageData)
 
-		if err := rows.Err(); err != nil {
-			log.Printf("Row error: %v", err)
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
+		// Send the base64 encoded image to the frontend
 		w.Header().Set("Content-Type", "application/json")
-		if err := json.NewEncoder(w).Encode(image); err != nil { // Use image instead of data
+		if err := json.NewEncoder(w).Encode(base64Image); err != nil {
 			log.Printf("Error encoding response: %v", err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
@@ -317,7 +277,7 @@ func main() {
 	http.HandleFunc("/api/data/", handleDeleteData(db))
 	http.HandleFunc("/api/gps-data", handlegetGpsData(db))
 	http.HandleFunc("/api/pole-image", handleUserPoleImage(db))
-	http.HandleFunc("/ws", handleWebSocketConnections)
+	// http.HandleFunc("/ws", handleWebSocketConnections)
 
 	corsMiddleware := func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -335,7 +295,7 @@ func main() {
 	}
 
 	handler := corsMiddleware(http.DefaultServeMux)
-	go handleMessages(db)
+	// go handleMessages(db)
 
 	fmt.Println("Server is running on :8080")
 	if err := http.ListenAndServe(":8080", handler); err != nil {

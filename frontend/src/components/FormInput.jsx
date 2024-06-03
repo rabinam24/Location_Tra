@@ -80,27 +80,92 @@ const Form = () => {
   };
 
 
+  // const handleSubmit = async (event) => {
+  //   event.preventDefault();
+  //   try {
+  //     // Convert latitude and longitude to numbers
+  //     const dataToSubmit = {
+  //       ...userInfo,
+  //       latitude: parseFloat(userInfo.latitude),
+  //       longitude: parseFloat(userInfo.longitude),
+  //       multipleimages: userInfo.multipleimages.join(','), // Convert array to string
+  //     };
+  //     const response = await axios.post(
+  //       "http://localhost:8080/submit-form",
+  //       dataToSubmit
+  //     );
+  //     console.log("Data inserted successfully:", response.data);
+  //     setSuccessMessage("Data inserted successfully!");
+  //     setTimeout(() => {
+  //       setSuccessMessage("");
+  //     }, 1500);
+
+  //     // Clear the form data
+  //     setUserInfo({
+  //       location: "",
+  //       latitude: "",
+  //       longitude: "",
+  //       selectpole: "",
+  //       selectpolestatus: "",
+  //       selectpolelocation: "",
+  //       description: "",
+  //       poleimage: "",
+  //       availableisp: "",
+  //       selectisp: "",
+  //       multipleimages: [],
+  //     });
+  //   } catch (error) {
+  //     console.error("Error inserting data:", error);
+  //   }
+  // };
+
+
   const handleSubmit = async (event) => {
     event.preventDefault();
     try {
-      // Convert latitude and longitude to numbers
-      const dataToSubmit = {
-        ...userInfo,
-        latitude: parseFloat(userInfo.latitude),
-        longitude: parseFloat(userInfo.longitude),
-        multipleimages: userInfo.multipleimages.join(','), // Convert array to string
-      };
+      const formData = new FormData();
+  
+      // Append fields to formData
+      formData.append("location", userInfo.location);
+      formData.append("latitude", parseFloat(userInfo.latitude));
+      formData.append("longitude", parseFloat(userInfo.longitude));
+      formData.append("selectpole", userInfo.selectpole);
+      formData.append("selectpolestatus", userInfo.selectpolestatus);
+      formData.append("selectpolelocation", userInfo.selectpolelocation);
+      formData.append("description", userInfo.description);
+  
+      if (userInfo.poleimage) {
+        formData.append("poleimage", userInfo.poleimage);
+      }
+  
+      formData.append("availableisp", userInfo.availableisp);
+      formData.append("selectisp", userInfo.selectisp);
+  
+      for (let i = 0; i < userInfo.multipleimages.length; i++) {
+        formData.append("multipleimages", userInfo.multipleimages[i]);
+      }
+  
+      // Log the formData content for debugging
+      for (let pair of formData.entries()) {
+        console.log(pair[0] + ": " + pair[1]);
+      }
+  
       const response = await axios.post(
         "http://localhost:8080/submit-form",
-        dataToSubmit
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
       );
+  
       console.log("Data inserted successfully:", response.data);
       setSuccessMessage("Data inserted successfully!");
       setTimeout(() => {
         setSuccessMessage("");
       }, 1500);
-
-      // Clear the form data
+  
       setUserInfo({
         location: "",
         latitude: "",
@@ -109,7 +174,7 @@ const Form = () => {
         selectpolestatus: "",
         selectpolelocation: "",
         description: "",
-        poleimage: "",
+        poleimage: null,
         availableisp: "",
         selectisp: "",
         multipleimages: [],
@@ -118,7 +183,7 @@ const Form = () => {
       console.error("Error inserting data:", error);
     }
   };
-
+  
   const handleAddMore = () => {
     const newAdditionalInfo = {
       selectisp: "",

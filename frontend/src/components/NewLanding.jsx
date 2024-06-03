@@ -11,6 +11,7 @@ import HorizontalBars from "./Dashboard";
 import Home from "../Routes/Homepage";
 import MapWithMarkers from "./MapComponent";
 import PoleImage from "./PoleImage";
+import ImageGallery from "./PoleImage";
 
 function NewLanding() {
   const [trip, setTrip] = useState({
@@ -206,7 +207,7 @@ function NewLanding() {
               {showAddTravelLogButton && <Form />}
 
               {/* <MapWithMarkers /> */}
-              {/* <PoleImage /> */}
+              {/* <ImageGallery /> */}
             </>
           )}
         </Grid>
