@@ -10,52 +10,102 @@ import Form from "./FormInput";
 import HorizontalBars from "./Dashboard";
 import Home from "../Routes/Homepage";
 import MapWithMarkers from "./MapComponent";
-// import PoleImage from "./PoleImage";
-// import ImageGallery from "./PoleImage";
+import ImageGallery from "./PoleImage";
+import axios from "axios"; // Import Axios
 
 function NewLanding() {
   const [trip, setTrip] = useState({
     started: false,
     startTime: null,
     elapsedTime: 0,
+    id: null,
   });
   const [showAddTravelLogButton, setShowAddTravelLogButton] = useState(false);
-  const [allInfo, setAllInfo] = useState([]);
-  const [editContent, setEditContent] = useState({});
-  // const [selectedUser, setSelectedUser] = useState(null);
   const [showUserData, setShowUserData] = useState(false);
   const intervalIdRef = useRef(null);
-
-  const [userInfo, setUserInfo] = useState({
-    location: "",
-    latitude: "",
-    longitude: "",
-    selectpole: "",
-    selectpolestatus: "",
-    selectpolelocation: "",
-    description: "",
-    poleimage: "",
-    availableisp: "",
-    selectisp: "",
-    multipleimages: "",
-  });
-
   const [openModal, setOpenModal] = useState(false);
 
-  const handleStartClick = () => {
-    const currentTime = new Date();
-    setTrip({ started: true, startTime: currentTime, elapsedTime: 0 });
-    setShowAddTravelLogButton(true);
-    setShowUserData(false); // Hide user data when starting the trip
-    setOpenModal(false);
+  // Scroll to top when component mounts
+  useEffect(() => {
+    window.onbeforeunload = () => {
+      window.scrollTo(0, 0);
+    };
+  }, []);
+
+
+  // Load trip state from localStorage
+  useEffect(() => {
+    const savedTrip = JSON.parse(localStorage.getItem('trip'));
+    if (savedTrip && savedTrip.started) {
+      const elapsedTime = new Date() - new Date(savedTrip.startTime);
+      setTrip({ ...savedTrip, elapsedTime });
+      setShowAddTravelLogButton(true);
+    }
+  }, []);
+
+
+  // Save trip state to localStorage
+  useEffect(() => {
+    localStorage.setItem('trip', JSON.stringify(trip));
+  }, [trip]);
+
+  const handleStartClick = async () => {
+    const userId = 1; // Replace with actual user ID or other required data
+
+    try {
+      // Correct the request data according to the server's requirements
+      const requestData = {
+        userId: userId,
+        startTime: new Date().toISOString(), // Example start time
+      };
+
+      const response = await axios.post("http://localhost:8080/start-trip", requestData, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.status !== 200) {
+        throw new Error("Failed to start the trip");
+      }
+
+      const currentTime = new Date();
+      setTrip({ started: true, startTime: currentTime, elapsedTime: 0, id: response.data.tripId });
+      setShowAddTravelLogButton(true);
+      setShowUserData(false); // Hide user data when starting the trip
+      setOpenModal(false);
+    } catch (error) {
+      console.error('Error starting trip:', error.response ? error.response.data : error.message);
+    }
   };
 
-  const handleStopClick = () => {
-    setTrip({ started: false, startTime: null, elapsedTime: 0 });
-    if (intervalIdRef.current) {
-      clearInterval(intervalIdRef.current);
+  const handleStopClick = async () => {
+    const userId = 1; // Replace with actual user ID
+
+    try {
+      const response = await axios.post("http://localhost:8080/end-trip", {
+        tripId: trip.id, // Accessing tripId from state
+        userId: userId, // Using userId defined in function
+        endTime: new Date().toISOString()
+      }, {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.status !== 200) {
+        throw new Error("Failed to end the trip");
+      }
+
+      setTrip({ started: false, startTime: null, elapsedTime: 0, id: null });
+      localStorage.removeItem('trip');
+      if (intervalIdRef.current) {
+        clearInterval(intervalIdRef.current);
+      }
+      setShowAddTravelLogButton(false);
+    } catch (error) {
+      console.error('Error ending trip:', error.response ? error.response.data : error.message);
     }
-    setShowAddTravelLogButton(false);
   };
 
   useEffect(() => {
@@ -63,7 +113,7 @@ function NewLanding() {
       intervalIdRef.current = setInterval(() => {
         setTrip((prevTrip) => ({
           ...prevTrip,
-          elapsedTime: new Date() - prevTrip.startTime,
+          elapsedTime: new Date() - new Date(prevTrip.startTime),
         }));
       }, 1000);
     }
@@ -116,8 +166,6 @@ function NewLanding() {
                 </Grid>
               </Grid>
 
-              {/* <MapWithMarkers /> */}
-
               <Dialog
                 open={openModal}
                 onClose={() => setOpenModal(false)}
@@ -150,16 +198,7 @@ function NewLanding() {
             </Grid>
           )}
 
-          {showUserData && (
-            <Home
-              userInfo={userInfo}
-              setUserInfo={setUserInfo}
-              allInfo={allInfo}
-              setAllInfo={setAllInfo}
-              editContent={editContent}
-              setEditContent={setEditContent}
-            />
-          )}
+          {showUserData && <Home />}
 
           {trip.started && (
             <>
@@ -207,7 +246,7 @@ function NewLanding() {
               {showAddTravelLogButton && <Form />}
 
               <MapWithMarkers />
-              {/* <ImageGallery /> */}
+              <ImageGallery />
             </>
           )}
         </Grid>

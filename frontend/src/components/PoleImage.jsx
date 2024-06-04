@@ -6,11 +6,12 @@ const ImageGallery = () => {
 
   useEffect(() => {
     axios.get("http://localhost:8080/api/pole-image")
-    
       .then(response => {
-        
-        setImages(response.data);
-        console.log(response);
+        // Check if response data is not empty
+        if (response.data) {
+          setImages([response.data]); // Wrap single image data in an array
+          console.log(response);
+        }
       })
       .catch(error => { 
         console.error("Error fetching images:", error);

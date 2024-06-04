@@ -43,8 +43,8 @@ const MapWithMarkers = () => {
   }, []);
 
   useEffect(() => {
-    if (gpsData.length > 0) {
-      setMapCenter([gpsData[0].latitude, gpsData[0].longitude]);
+    if (gpsData.length > 1) {
+      setUserPath(gpsData.map((location) => [location.latitude, location.longitude]));
     }
   }, [gpsData]);
 

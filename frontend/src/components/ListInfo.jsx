@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
 import axios from 'axios';
-import EditForm from "./Editform";
+// import EditForm from "./EditForm";
 import "../ListInfo.css";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
@@ -10,10 +10,12 @@ import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import Paper from "@mui/material/Paper";
 
-const List = ({ allInfo, setAllInfo, editContent, setEditContent }) => {
+const List = () => {
+  const [allInfo, setAllInfo] = useState([]);
   const [edit, setEdit] = useState(false);
+  const [editContent, setEditContent] = useState(null);
   const [sortDirection, setSortDirection] = useState("asc");
-  const [tableData, setTableData] = useState(allInfo);
+  const [tableData, setTableData] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const rowsPerPage = 5;
 
@@ -21,7 +23,6 @@ const List = ({ allInfo, setAllInfo, editContent, setEditContent }) => {
     const fetchData = async () => {
       try {
         const response = await axios.get('http://localhost:8080/user-data');
-        console.log(response);
         setAllInfo(response.data);
       } catch (error) {
         console.error('Error fetching user data:', error);
@@ -29,10 +30,10 @@ const List = ({ allInfo, setAllInfo, editContent, setEditContent }) => {
     };
 
     fetchData();
-  }, [setAllInfo]);
+  }, []);
 
   useEffect(() => {
-    setTableData(allInfo);
+    setTableData(allInfo || []);
   }, [allInfo]);
 
   const handleSort = () => {
@@ -47,12 +48,6 @@ const List = ({ allInfo, setAllInfo, editContent, setEditContent }) => {
     setSortDirection(sortDirection === "asc" ? "desc" : "asc");
   };
 
-  // const toggleEdit = (id) => {
-  //   const info = allInfo.find((info) => info.id === id);
-  //   setEditContent(info);
-  //   setEdit(true);
-  // };
-
   const handleDelete = async (id) => {
     try {
       await axios.delete(`http://localhost:8080/api/data/${id}`);
@@ -60,7 +55,7 @@ const List = ({ allInfo, setAllInfo, editContent, setEditContent }) => {
       setAllInfo(updatedData);
     } catch (error) {
       console.error('Error deleting data:', error);
-      alert('Error deleting data: ' + error.response?.data?.message || error.message);
+      alert(`Error deleting data: ${error.response?.data?.message || error.message}`);
     }
   };
 
@@ -74,7 +69,9 @@ const List = ({ allInfo, setAllInfo, editContent, setEditContent }) => {
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell onClick={handleSort}>Location</TableCell>
+              <TableCell onClick={handleSort}>
+                Location {sortDirection === "asc" ? "↑" : "↓"}
+              </TableCell>
               <TableCell>Latitude</TableCell>
               <TableCell>Longitude</TableCell>
               <TableCell>Select Pole</TableCell>
@@ -98,12 +95,17 @@ const List = ({ allInfo, setAllInfo, editContent, setEditContent }) => {
                 <TableCell>{info.selectpolestatus}</TableCell>
                 <TableCell>{info.selectpolelocation}</TableCell>
                 <TableCell>{info.description}</TableCell>
-                <TableCell>{info.poleimage}</TableCell>
+                <TableCell>
+                  {info.poleimage && <img src={`data:image/jpeg;base64,${info.poleimage}`} alt="Pole Image" style={{ maxWidth: "100px" }} />}
+                </TableCell>
                 <TableCell>{info.availableisp}</TableCell>
                 <TableCell>{info.selectisp}</TableCell>
-                <TableCell>{info.multipleimages}</TableCell>
                 <TableCell>
-                  {/* <button className="edit-button" onClick={() => toggleEdit(info.id)}>Edit</button> */}
+                  {info.multipleimages && info.multipleimages.map((image, index) => (
+                    <img key={index} src={`data:image/jpeg;base64,${image}`} alt={`Multiple Image ${index + 1}`} style={{ maxWidth: "100px", marginRight: "5px" }} />
+                  ))}
+                </TableCell>
+                <TableCell>
                   <button className="delete-button" onClick={() => handleDelete(info.id)}>Delete</button>
                 </TableCell>
               </TableRow>
@@ -111,20 +113,22 @@ const List = ({ allInfo, setAllInfo, editContent, setEditContent }) => {
           </TableBody>
         </Table>
       </TableContainer>
-      <div className="pagination">
-        {Array.from(
-          { length: Math.ceil(tableData.length / rowsPerPage) },
-          (_, index) => (
-            <button
-              key={index}
-              onClick={() => setCurrentPage(index + 1  )}
-              className={currentPage === index + 1 ? "active" : ""}
-            >
-              {index + 1}
-            </button>
-          )
-        )}
-      </div>
+      {tableData.length > rowsPerPage && (
+        <div className="pagination">
+          {Array.from(
+            { length: Math.ceil(tableData.length / rowsPerPage) },
+            (_, index) => (
+              <button
+                key={index}
+                onClick={() => setCurrentPage(index + 1)}
+                className={currentPage === index + 1 ? "active" : ""}
+              >
+                {index + 1}
+              </button>
+            )
+          )}
+        </div>
+      )}
       {edit && (
         <div className="edit-form-container">
           <EditForm

@@ -39,6 +39,13 @@ type FormData struct {
 	CreatedAt          time.Time `json:"created_at"`
 }
 
+type StartEnd struct {
+	UserID        int       `json:"userid"`
+	TripStarted   bool      `json:"trip_started"`
+	TripStartTime time.Time `json:"-"`
+	TripEndTime   time.Time `json:"-"`
+}
+
 const (
 	host     = "localhost"
 	port     = 5432
@@ -78,6 +85,119 @@ func handleWebSocketConnections(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+}
+
+func handleStartTrip(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// Parse the request body to get the user ID
+		var requestBody struct {
+			UserID int `json:"userid"`
+		}
+
+		body, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			http.Error(w, "Failed to read request body", http.StatusBadRequest)
+			return
+		}
+
+		err = json.Unmarshal(body, &requestBody)
+		if err != nil {
+			http.Error(w, "Failed to parse request body", http.StatusBadRequest)
+			return
+		}
+
+		userID := requestBody.UserID
+
+		// Get the current time as the trip start time
+		tripStartTime := time.Now()
+
+		// Assuming you have the user ID, create a StartEnd struct
+		// with the appropriate data and call insertTripData to insert it into the database
+		startEnd := StartEnd{
+			UserID:        userID,
+			TripStarted:   true,
+			TripStartTime: tripStartTime,
+			TripEndTime:   time.Time{}, // Trip end time is empty initially
+		}
+
+		// Insert trip data into the database
+		err = insertTripData(db, startEnd)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// Send a response indicating that the trip has started
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("Trip started successfully"))
+	}
+}
+func handleEndTrip(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// Parse the request body to get the user ID
+		var requestBody struct {
+			UserID int `json:"userid"`
+		}
+
+		body, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			http.Error(w, "Failed to read request body", http.StatusBadRequest)
+			return
+		}
+
+		err = json.Unmarshal(body, &requestBody)
+		if err != nil {
+			http.Error(w, "Failed to parse request body", http.StatusBadRequest)
+			return
+		}
+
+		userID := requestBody.UserID
+
+		// Check if trip start time exists in local storage
+		tripStartTimeStr := r.Header.Get("X-Trip-Start-Time")
+		var tripStartTime time.Time
+		if tripStartTimeStr != "" {
+			// Trip start time found in local storage, parse it
+			tripStartTimeUnix, err := strconv.ParseInt(tripStartTimeStr, 10, 64)
+			if err != nil {
+				http.Error(w, "Invalid trip start time format", http.StatusBadRequest)
+				return
+			}
+			tripStartTime = time.Unix(tripStartTimeUnix, 0)
+		} else {
+			// Trip start time not found in local storage, use current time
+			tripStartTime = time.Now()
+		}
+
+		// Assuming you have the user ID, create a StartEnd struct
+		// with the appropriate data and call insertTripData to insert it into the database
+		startEnd := StartEnd{
+			UserID:        userID,
+			TripStarted:   false,
+			TripStartTime: tripStartTime,
+			TripEndTime:   time.Now(),
+		}
+
+		// Insert trip data into the database
+		err = insertTripData(db, startEnd)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// Send a response indicating that the trip has ended
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("Trip ended successfully"))
+	}
+}
+
+func insertTripData(db *sql.DB, startEnd StartEnd) error {
+	query := `INSERT INTO trip (userid, trip_started, trip_start_time, trip_end_time) VALUES ($1, $2, $3, $4)`
+	_, err := db.Exec(query, startEnd.UserID, startEnd.TripStarted, startEnd.TripStartTime, startEnd.TripEndTime)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func insertData(db *sql.DB, formData FormData) error {
@@ -178,7 +298,20 @@ func handleUserData(db *sql.DB) http.HandlerFunc {
 				continue // Skip this entry
 			}
 
+			// Read image data from the database
+			poleImageData := formData.PoleImage
+			// You may need to read multiple images similarly if they are stored in the database
+
+			// Set image data in the form data struct
+			formData.PoleImage = nil // Clear the image data to avoid sending it in JSON response
+			// You may need to clear multiple image fields similarly if they are present
+
+			// Append form data to the slice
 			data = append(data, formData)
+
+			// Send image data in the response separately
+			w.Header().Set("Content-Type", "image/jpeg") // Set appropriate content type
+			w.Write(poleImageData)                       // Write the image data to the response writer
 		}
 
 		if err := rows.Err(); err != nil {
@@ -327,6 +460,8 @@ func main() {
 	http.HandleFunc("/api/gps-data", handlegetGpsData(db))
 	http.HandleFunc("/api/pole-image", handleUserPoleImage(db))
 	http.HandleFunc("/ws", handleWebSocketConnections)
+	http.HandleFunc("/start-trip", handleStartTrip(db))
+	http.HandleFunc("/end-trip", handleEndTrip(db))
 
 	corsMiddleware := func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
