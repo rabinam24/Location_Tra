@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import axios from 'axios';
+import axios from "axios";
 // import EditForm from "./EditForm";
 import "../ListInfo.css";
 import Table from "@mui/material/Table";
@@ -22,10 +22,10 @@ const List = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await axios.get('http://localhost:8080/user-data');
+        const response = await axios.get("http://localhost:8080/user-data");
         setAllInfo(response.data);
       } catch (error) {
-        console.error('Error fetching user data:', error);
+        console.error("Error fetching user data:", error);
       }
     };
 
@@ -54,8 +54,10 @@ const List = () => {
       const updatedData = allInfo.filter((info) => info.id !== id);
       setAllInfo(updatedData);
     } catch (error) {
-      console.error('Error deleting data:', error);
-      alert(`Error deleting data: ${error.response?.data?.message || error.message}`);
+      console.error("Error deleting data:", error);
+      alert(
+        `Error deleting data: ${error.response?.data?.message || error.message}`
+      );
     }
   };
 
@@ -96,17 +98,31 @@ const List = () => {
                 <TableCell>{info.selectpolelocation}</TableCell>
                 <TableCell>{info.description}</TableCell>
                 <TableCell>
-                  {info.poleimage && <img src={`data:image/jpeg;base64,${info.poleimage}`} alt="Pole Image" style={{ maxWidth: "100px" }} />}
+                  {info.poleimage && (
+                    <img
+                      src={`data:image/jpeg;base64,${info.poleimage}`}
+                      alt="Pole Image"
+                      style={{ maxWidth: "100px" }}
+                    />
+                  )}
                 </TableCell>
                 <TableCell>{info.availableisp}</TableCell>
                 <TableCell>{info.selectisp}</TableCell>
                 <TableCell>
-                  {info.multipleimages && info.multipleimages.map((image, index) => (
-                    <img key={index} src={`data:image/jpeg;base64,${image}`} alt={`Multiple Image ${index + 1}`} style={{ maxWidth: "100px", marginRight: "5px" }} />
-                  ))}
+                  {info.multipleimages &&
+                    Array.isArray(info.multipleimages) &&
+                    info.multipleimages.map((image, index) => (
+                      <img key={index} src={image} alt={`Image ${index}`} />
+                    ))}
                 </TableCell>
+
                 <TableCell>
-                  <button className="delete-button" onClick={() => handleDelete(info.id)}>Delete</button>
+                  <button
+                    className="delete-button"
+                    onClick={() => handleDelete(info.id)}
+                  >
+                    Delete
+                  </button>
                 </TableCell>
               </TableRow>
             ))}

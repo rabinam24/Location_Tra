@@ -7,7 +7,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"strconv"
@@ -94,7 +94,7 @@ func handleStartTrip(db *sql.DB) http.HandlerFunc {
 			UserID int `json:"userid"`
 		}
 
-		body, err := ioutil.ReadAll(r.Body)
+		body, err := io.ReadAll(r.Body)
 		if err != nil {
 			http.Error(w, "Failed to read request body", http.StatusBadRequest)
 			return
@@ -139,7 +139,7 @@ func handleEndTrip(db *sql.DB) http.HandlerFunc {
 			UserID int `json:"userid"`
 		}
 
-		body, err := ioutil.ReadAll(r.Body)
+		body, err := io.ReadAll(r.Body)
 		if err != nil {
 			http.Error(w, "Failed to read request body", http.StatusBadRequest)
 			return
@@ -235,7 +235,7 @@ func handleFormData(db *sql.DB) http.HandlerFunc {
 		file, _, err := r.FormFile("image")
 		if err == nil {
 			defer file.Close()
-			poleImageData, err := ioutil.ReadAll(file)
+			poleImageData, err := io.ReadAll(file)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
@@ -252,7 +252,7 @@ func handleFormData(db *sql.DB) http.HandlerFunc {
 				return
 			}
 			defer file.Close()
-			imageData, err := ioutil.ReadAll(file)
+			imageData, err := io.ReadAll(file)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
