@@ -192,6 +192,7 @@ def submit_user_form():
         print(description)
         availableisp = form_data.get('availableisp')
         print(availableisp)
+        print(type(availableisp))
         saved_files = []
         
         if 'poleimage' in request.files:
@@ -205,9 +206,29 @@ def submit_user_form():
             print(content_type,type(content_type))
             directory = 'dummy'
             file_path = os.path.join(directory, filename)
+            print(file_path)
             poleimage.save(file_path)
         else:
             print("no electricPOle.jpg")
+
+        if availableisp.lower() == 'yes':
+            selectisp = form_data.get('selectisp')
+            ispimages = request.files.getlist('ispimages')
+            for particular_isp in ispimages:
+                ispfilename = particular_isp.filename
+                main_dir = 'dummy'
+                sub_dir = selectisp
+                ispfilepath = os.path.join(main_dir,sub_dir)
+                if not os.path.exists(ispfilepath):
+                    os.makedirs(ispfilepath)
+                ispfilefullpath = os.path.join(ispfilepath,ispfilename)
+                print(ispfilefullpath)
+                particular_isp.save(ispfilefullpath)
+        elif availableisp.lower() == 'no':
+            pass
+        else:
+            return jsonify({"error":"please enter only yes and no boolean values in availableisp"})
+                
 
 
         # Save the uploaded files
