@@ -63,28 +63,41 @@ var upgrader = websocket.Upgrader{
 func handleWebSocketConnections(w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Println("Error upgrading the web socket connection:", err)
+		log.Println("Error upgrading the websocket connection:", err)
 		return
 	}
 	defer conn.Close()
 
-	//Loop to handle incoming web Socket message
-	for {
-		_, message, err := conn.ReadMessage()
-		if err != nil {
-			log.Println("Error reading the message from the websocket:", err)
-			break
-		}
-		fmt.Printf("Received message from the client: %s\n", message)
+	// Simulate sending GPS data every 2 seconds
+	ticker := time.NewTicker(2 * time.Second)
+	defer ticker.Stop()
 
-		// Echo message back to the client
-		err = conn.WriteMessage(websocket.TextMessage, message)
+	for range ticker.C {
+		// Generate fake GPS data
+		fakeData := []FormData{
+			{Latitude: 27.6714893, Longitude: 85.3120526}, // Initial position
+			{Latitude: 27.6715, Longitude: 85.3121},       // Fake position update
+			{Latitude: 27.6716, Longitude: 85.3222},       // Fake position update
+			{Latitude: 27.6717, Longitude: 85.3223},       // Fake position update
+			// Add more fake data as needed
+		}
+
+		// Convert GPS data to JSON
+		jsonData, err := json.Marshal(fakeData)
 		if err != nil {
-			log.Println("Error writing the message to the  websocket:", err)
+			log.Println("Error encoding GPS data:", err)
+			continue
+		}
+
+		err = conn.WriteMessage(websocket.TextMessage, jsonData)
+		if err != nil {
+			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway) {
+				log.Println("Error writing GPS data to the websocket:", err)
+			}
 			break
 		}
+
 	}
-
 }
 
 func handleStartTrip(db *sql.DB) http.HandlerFunc {

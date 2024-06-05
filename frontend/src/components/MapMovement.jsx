@@ -1,62 +1,56 @@
+import React, { useState, useEffect } from "react";
 import "../styles.css";
 import "leaflet/dist/leaflet.css";
-import React, { useState, useEffect } from "react";
-import { MapContainer, TileLayer, Marker, Popup, Polyline } from "react-leaflet";
-import { w3cwebsocket as W3CWebSocket } from "websocket";
+import { MapContainer, TileLayer, Marker, Polyline, FlyTo } from "react-leaflet";
 
-const MapWithMarkers = () => {
+const MapWithWebSocket = () => {
   const [gpsData, setGPSData] = useState([]);
-  const [userPosition, setUserPosition] = useState(null);
   const [userPath, setUserPath] = useState([]);
-  const [client, setClient] = useState(null);
+  const [mapCenter, setMapCenter] = useState([27.6714893, 85.3120526]);
+  const [zoomLevel, setZoomLevel] = useState(13); // Initial zoom level
 
+  // Simulate fake GPS data
   useEffect(() => {
-    // Establish WebSocket connection
-    const wsClient = new W3CWebSocket("ws://localhost:8080/ws");
-    console.log(wsClient);
+    const intervalId = setInterval(() => {
+      const fakeData = [
+        { latitude: 27.6714893, longitude: 85.3120526 }, // Initial position
+        { latitude: 27.6715, longitude: 85.3121 },        // Fake position update
+        { latitude: 27.6716, longitude: 85.3222 },        // Fake position update
+        { latitude: 27.6717, longitude: 85.3223 },        // Fake position update
+        // Add more fake data as needed
+      ];
+      setGPSData(fakeData);
+    }, 2000); // Update GPS data every 2 seconds
 
-    wsClient.onopen = () => {
-      console.log("WebSocket Client Connected");
-    };
-
-    wsClient.onmessage = (message) => {
-      const dataFromServer = JSON.parse(message.data);
-      // Update GPS data
-      setGPSData(dataFromServer.gpsData);
-      // Update user position
-      setUserPosition(dataFromServer.userPosition);
-      // Update user path
-      setUserPath(dataFromServer.userPath);
-    };
-
-    setClient(wsClient);
-
-    return () => {
-      // Close WebSocket connection on component unmount
-      if (client) {
-        client.close();
-      }
-    };
+    return () => clearInterval(intervalId);
   }, []);
 
-  return (
-    <MapContainer center={[27.6714965, 85.3120282]} zoom={12} style={{ height: "400px", margin: "10px 0" }}>
-      <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-      {gpsData.map((location) => (
-        <Marker key={location.id} position={[location.latitude, location.longitude]}>
-          {/* <Popup>{location.id}</Popup> */}
-        </Marker>
-      ))}
-      {userPosition && (
-        <>
-          <Marker position={userPosition}>
-            {/* <Popup></Popup> */}
-          </Marker>
-          <Polyline positions={userPath} />
-        </>
-      )}
-    </MapContainer>
-  );
-};
+  useEffect(() => {
+    if (gpsData.length > 1) {
+      const newPath = gpsData.map((location) => [location.latitude, location.longitude]);
+      setUserPath(newPath);
+      const latestPosition = gpsData[gpsData.length - 1];
+      setMapCenter([latestPosition.latitude, latestPosition.longitude]); // Update map center to the latest GPS location
+      setZoomLevel(16); // Adjust zoom level as needed
+    }
+  }, [gpsData]);
 
-export default MapWithMarkers;
+  return (
+    <div>
+      <p>Fake GPS Data</p>
+      <MapContainer center={mapCenter} zoom={zoomLevel} style={{ height: "400px", margin: "10px 0" }}>
+        <FlyTo
+          position={mapCenter} // Fly to the latest GPS position
+          zoom={zoomLevel} // Zoom level
+        />
+        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+        {gpsData.map((location, index) => (
+          <Marker key={index} position={[location.latitude, location.longitude]} />
+        ))}
+        <Polyline positions={userPath} />
+      </MapContainer>
+    </div>
+  );
+};  
+
+export default MapWithWebSocket;

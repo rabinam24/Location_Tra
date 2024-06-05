@@ -12,6 +12,8 @@ import Home from "../Routes/Homepage";
 import MapWithMarkers from "./MapComponent";
 import ImageGallery from "./PoleImage";
 import axios from "axios"; // Import Axios
+import MapWithWebSocket from "./MapComponent";
+
 
 function NewLanding() {
   const [trip, setTrip] = useState({
@@ -245,7 +247,9 @@ function NewLanding() {
 
               {showAddTravelLogButton && <Form />}
 
-              <MapWithMarkers />
+              
+              <MapWithWebSocket />
+            
               <ImageGallery />
             </>
           )}
