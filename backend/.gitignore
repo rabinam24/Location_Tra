@@ -17,3 +17,5 @@ buildStaticReactVite
 dummy
 uploads
 logs
+mydatabase.db
+bib.db

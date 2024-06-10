@@ -19,8 +19,8 @@ app = Flask(__name__)
 
 CORS(app)  # Enable CORS for all routes
 # CORS(app, origins='http://localhost:5173')  # Allow requests only from http://localhost:5173
-import sqlite3
-
+# import sqlite3
+# db.create_all()
 # Set up logging
 if not os.path.exists('logs'):
     os.makedirs('logs')
@@ -42,8 +42,14 @@ class submitForm(Form):
     form_description = StringField('Description')
     form_poleimage = FileField('selectpoleimage')
 
+class Student(db.Model):
+    roll = db.Column(db.Integer,primary_key=True)
+    name = db.Column(db.String(80))
 
-
+def randomize():
+    # Generate SQL code for creating tables
+    sql_code = db.Model.metadata.create_all(bind=db.engine)
+    print(sql_code)
 
 @app.route('/')
 def hello_world():
@@ -69,9 +75,9 @@ def allowed_file(filename):
 
 # Configure database (replace with your configuration from config.py or environment variables)
 
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:acharya@localhost/test'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-db.init_app(app)  # Initialize database
+# app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:acharya@localhost/test'
+# app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+# db.init_app(app)  # Initialize database
 print("Database initialized successfully")
 app.config['UPLOAD_FOLDER'] = 'uploads'
 
@@ -396,4 +402,6 @@ if __name__ == '__main__':
         os.makedirs(app.config['UPLOAD_FOLDER'])
     if not os.path.exists('dummy'):
         os.makedirs('dummy')
+    # with app.app_context():
+    #     randomize()
     app.run(debug=True)
