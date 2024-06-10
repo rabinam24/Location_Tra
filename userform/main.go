@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"encoding/base64"
@@ -15,6 +16,7 @@ import (
 
 	"github.com/gorilla/websocket"
 	_ "github.com/lib/pq"
+	"github.com/minio/minio-go"
 )
 
 type config struct {
@@ -32,10 +34,10 @@ type FormData struct {
 	SelectPoleStatus   string    `json:"selectpolestatus"`
 	SelectPoleLocation string    `json:"selectpolelocation"`
 	Description        string    `json:"description"`
-	PoleImage          []byte    `json:"poleimage"`
+	PoleImage          string    `json:"poleimage_url"`
 	AvailableISP       string    `json:"availableisp"`
 	SelectISP          string    `json:"selectisp"`
-	MultipleImages     []byte    `json:"multipleimages"`
+	MultipleImages     []string  `json:"multipleimages_urls"`
 	CreatedAt          time.Time `json:"created_at"`
 }
 
@@ -213,18 +215,37 @@ func insertTripData(db *sql.DB, startEnd StartEnd) error {
 	return nil
 }
 
+func uploadToMinIO(client *minio.Client, bucketName, objectName string, fileData []byte) (string, error) {
+	_, err := client.PutObject(
+		bucketName,
+		objectName,
+		bytes.NewReader(fileData),
+		int64(len(fileData)),
+		minio.PutObjectOptions{ContentType: "application/octet-stream"},
+	)
+	if err != nil {
+		return "", err
+	}
+	// Manually construct the URL using the endpoint, bucket name, and object name
+	fileURL := fmt.Sprintf("http://%s/%s/%s", "play.min.io", bucketName, objectName)
+	return fileURL, nil
+}
+
 func insertData(db *sql.DB, formData FormData) error {
+	multipleImagesJSON, err := json.Marshal(formData.MultipleImages)
+	if err != nil {
+		return fmt.Errorf("failed to marshal image URLs to JSON: %v", err)
+	}
+
 	query := `
         INSERT INTO userform (location, latitude, longitude, selectpole, selectpolestatus, selectpolelocation, description, poleimage, availableisp, selectisp, multipleimages, created_at)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12);`
 
-	base64Image := base64.StdEncoding.EncodeToString(formData.PoleImage)
-
-	_, err := db.Exec(query, formData.Location, formData.Latitude, formData.Longitude, formData.SelectPole, formData.SelectPoleStatus, formData.SelectPoleLocation, formData.Description, base64Image, formData.AvailableISP, formData.SelectISP, formData.MultipleImages, time.Now())
+	_, err = db.Exec(query, formData.Location, formData.Latitude, formData.Longitude, formData.SelectPole, formData.SelectPoleStatus, formData.SelectPoleLocation, formData.Description, formData.PoleImage, formData.AvailableISP, formData.SelectISP, string(multipleImagesJSON), time.Now())
 	return err
 }
 
-func handleFormData(db *sql.DB) http.HandlerFunc {
+func handleFormData(db *sql.DB, minioClient *minio.Client, bucketName string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var formData FormData
 		err := r.ParseMultipartForm(10 << 20) // Parse multipart form data with a max of 10 MB
@@ -244,7 +265,7 @@ func handleFormData(db *sql.DB) http.HandlerFunc {
 		formData.AvailableISP = r.FormValue("availableisp")
 		formData.SelectISP = r.FormValue("selectisp")
 
-		// Retrieve and save single image
+		// Retrieve and upload single image
 		file, _, err := r.FormFile("image")
 		if err == nil {
 			defer file.Close()
@@ -253,12 +274,18 @@ func handleFormData(db *sql.DB) http.HandlerFunc {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
-			formData.PoleImage = poleImageData
+			poleImageName := fmt.Sprintf("%d-poleimage.jpg", time.Now().UnixNano())
+			poleImageURL, err := uploadToMinIO(minioClient, bucketName, poleImageName, poleImageData)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			formData.PoleImage = poleImageURL
 		}
 
-		// Retrieve and save multiple images
+		// Retrieve and upload multiple images
 		multipleImages := r.MultipartForm.File["multipleimages"]
-		for _, fileHeader := range multipleImages {
+		for i, fileHeader := range multipleImages {
 			file, err := fileHeader.Open()
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -270,8 +297,13 @@ func handleFormData(db *sql.DB) http.HandlerFunc {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
-			// Append imageData as an element of formData.MultipleImages
-			formData.MultipleImages = append(formData.MultipleImages, imageData...)
+			objectName := fmt.Sprintf("%d-multipleimage-%d.jpg", time.Now().UnixNano(), i)
+			imageURL, err := uploadToMinIO(minioClient, bucketName, objectName, imageData)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			formData.MultipleImages = append(formData.MultipleImages, imageURL)
 		}
 
 		// Insert form data into the database
@@ -284,14 +316,13 @@ func handleFormData(db *sql.DB) http.HandlerFunc {
 		w.Write([]byte("Data inserted successfully"))
 	}
 }
-
 func handleUserData(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		log.Println("Fetching user data...")
 		rows, err := db.Query("SELECT id, location, latitude, longitude, selectpole, selectpolestatus, selectpolelocation, description, poleimage, availableisp, selectisp, multipleimages, created_at FROM userform")
 		if err != nil {
 			log.Printf("Error querying database: %v", err)
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
 		defer rows.Close()
@@ -299,44 +330,42 @@ func handleUserData(db *sql.DB) http.HandlerFunc {
 		var data []FormData
 		for rows.Next() {
 			var formData FormData
-			if err := rows.Scan(&formData.ID, &formData.Location, &formData.Latitude, &formData.Longitude, &formData.SelectPole, &formData.SelectPoleStatus, &formData.SelectPoleLocation, &formData.Description, &formData.PoleImage, &formData.AvailableISP, &formData.SelectISP, &formData.MultipleImages, &formData.CreatedAt); err != nil {
+			var multipleImagesJSON sql.NullString // Use sql.NullString to handle NULL values
+
+			// Scan row values into variables
+			err := rows.Scan(&formData.ID, &formData.Location, &formData.Latitude, &formData.Longitude, &formData.SelectPole, &formData.SelectPoleStatus, &formData.SelectPoleLocation, &formData.Description, &formData.PoleImage, &formData.AvailableISP, &formData.SelectISP, &multipleImagesJSON, &formData.CreatedAt)
+			if err != nil {
 				log.Printf("Error scanning row: %v", err)
-				http.Error(w, err.Error(), http.StatusInternalServerError)
+				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 				return
 			}
 
-			// Check for NaN values
-			if isInvalidFloat(formData.Latitude) || isInvalidFloat(formData.Longitude) {
-				log.Printf("Invalid latitude or longitude for ID: %d", formData.ID)
-				continue // Skip this entry
+			// Check if JSON data is empty or NULL
+			if multipleImagesJSON.Valid && multipleImagesJSON.String != "" {
+				// Convert the JSON string back to a slice of strings only if it's not empty
+				if err := json.Unmarshal([]byte(multipleImagesJSON.String), &formData.MultipleImages); err != nil {
+					log.Printf("Error unmarshalling JSON: %v", err)
+					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+					return
+				}
 			}
-
-			// Read image data from the database
-			poleImageData := formData.PoleImage
-			// You may need to read multiple images similarly if they are stored in the database
-
-			// Set image data in the form data struct
-			formData.PoleImage = nil // Clear the image data to avoid sending it in JSON response
-			// You may need to clear multiple image fields similarly if they are present
 
 			// Append form data to the slice
 			data = append(data, formData)
-
-			// Send image data in the response separately
-			w.Header().Set("Content-Type", "image/jpeg") // Set appropriate content type
-			w.Write(poleImageData)                       // Write the image data to the response writer
 		}
 
 		if err := rows.Err(); err != nil {
 			log.Printf("Row error: %v", err)
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
 
+		// Set response header and encode data as JSON
 		w.Header().Set("Content-Type", "application/json")
 		if err := json.NewEncoder(w).Encode(data); err != nil {
 			log.Printf("Error encoding response: %v", err)
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
 		}
 	}
 }
@@ -453,21 +482,41 @@ func connectDB(cfg config) (*sql.DB, error) {
 }
 
 func main() {
+	// Initialize MinIO client
+	endpoint := "play.min.io"
+	accessKeyID := "4cEtgUVNyeS0Jej9FIWh"
+	secretAccessKey := "fgtX96NY97yrWPeV224ZhO4gbxflvm1DCMZccluT"
+	useSSL := true
+
+	client, err := minio.New(endpoint, accessKeyID, secretAccessKey, useSSL)
+	if err != nil {
+		log.Fatalln("Failed to initialize MinIO client:", err)
+	}
+
+	// Configuration for database connection
 	var cfg config
 	flag.StringVar(&cfg.db.dsn, "dsn", "", "Postgres connection string")
 	flag.Parse()
 
 	if cfg.db.dsn == "" {
+		host := "localhost"
+		port := 5432 // your_port
+		user := "binam"
+		password := "Bhandari"
+		dbname := "binam"
 		cfg.db.dsn = fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", host, port, user, password, dbname)
 	}
 
+	// Connect to the database
 	db, err := connectDB(cfg)
 	if err != nil {
 		log.Fatal("Error connecting to the database:", err)
 	}
 	defer db.Close()
 
-	http.HandleFunc("/submit-form", handleFormData(db))
+	// Set up HTTP handlers with required parameters
+	bucketName := "location-tracker"
+	http.HandleFunc("/submit-form", handleFormData(db, client, bucketName))
 	http.HandleFunc("/user-data", handleUserData(db))
 	http.HandleFunc("/api/data/", handleDeleteData(db))
 	http.HandleFunc("/api/gps-data", handlegetGpsData(db))
@@ -476,6 +525,7 @@ func main() {
 	http.HandleFunc("/start-trip", handleStartTrip(db))
 	http.HandleFunc("/end-trip", handleEndTrip(db))
 
+	// CORS middleware
 	corsMiddleware := func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -493,6 +543,7 @@ func main() {
 
 	handler := corsMiddleware(http.DefaultServeMux)
 
+	// Start the server
 	fmt.Println("Server is running on :8080")
 	if err := http.ListenAndServe(":8080", handler); err != nil {
 		log.Fatal("Error starting server:", err)
