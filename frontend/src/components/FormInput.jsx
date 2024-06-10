@@ -147,7 +147,7 @@ const Form = () => {
         formData.append("description", userInfo.description);
 
         if (userInfo.poleimage) {
-            formData.append("image", userInfo.poleimage); // Ensure the key is "image"
+            formData.append("image", userInfo.poleimage); 
         }
 
         formData.append("availableisp", userInfo.availableisp);
@@ -357,6 +357,7 @@ const Form = () => {
             <input
               multiple
               type="file"
+              accept="images/*"
               name="multipleimages"
               onChange={handleSliderImages}
               style={{ margin: "8px 0" }}

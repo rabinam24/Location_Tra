@@ -222,15 +222,33 @@ func insertTripData(db *sql.DB, startEnd StartEnd) error {
 //		fileURL := fmt.Sprintf("http://%s/%s/%s", "play.min.io", bucketName, objectName)
 //		return fileURL, nil
 //	}
-func uploadToMinIO(minioClient *minio.Client, endpoint, bucketName, objectName string, data []byte) (string, error) {
-	reader := bytes.NewReader(data)
-	_, err := minioClient.PutObject(bucketName, objectName, reader, int64(reader.Len()), minio.PutObjectOptions{
-		ContentType: "image/jpeg",
-	})
-	if err != nil {
-		return "", err
+//
+//	func uploadToMinIO(minioClient *minio.Client, endpoint, bucketName, objectName string, data []byte) (string, error) {
+//		reader := bytes.NewReader(data)
+//		_, err := minioClient.PutObject(bucketName, objectName, reader, int64(reader.Len()), minio.PutObjectOptions{
+//			ContentType: "image/jpeg",
+//		})
+//		if err != nil {
+//			return "", err
+//		}
+//		return fmt.Sprintf("http://%s/%s/%s", endpoint, bucketName, objectName), nil
+//	}
+func uploadToMinIO(minioClient *minio.Client, endpoint, bucketName string, objectNames []string, imageDatas [][]byte) ([]string, error) {
+	var imageURLs []string
+
+	for i, data := range imageDatas {
+		reader := bytes.NewReader(data)
+		_, err := minioClient.PutObject(bucketName, objectNames[i], reader, int64(len(data)), minio.PutObjectOptions{
+			ContentType: "image/jpeg",
+		})
+		if err != nil {
+			return nil, err
+		}
+		imageURL := fmt.Sprintf("http://%s/%s/%s", endpoint, bucketName, objectNames[i])
+		imageURLs = append(imageURLs, imageURL)
 	}
-	return fmt.Sprintf("http://%s/%s/%s", endpoint, bucketName, objectName), nil
+
+	return imageURLs, nil
 }
 
 func insertData(db *sql.DB, formData FormData) error {
@@ -286,18 +304,19 @@ func handleFormData(db *sql.DB, minioClient *minio.Client, bucketName string, en
 				return
 			}
 			poleImageName := fmt.Sprintf("%d-poleimage.jpeg", time.Now().UnixNano())
-			poleImageURL, err := uploadToMinIO(minioClient, endpoint, bucketName, poleImageName, poleImageData)
+			poleImageURLs, err := uploadToMinIO(minioClient, endpoint, bucketName, []string{poleImageName}, [][]byte{poleImageData})
 			if err != nil {
 				log.Printf("Error uploading single image to MinIO: %v", err)
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
-			formData.PoleImage = poleImageURL
-			log.Println("Uploaded Pole Image:", poleImageURL)
+			formData.PoleImage = poleImageURLs[0] // Update poleImageURL to be a string
+			log.Println("Uploaded Pole Image:", poleImageURLs[0])
 		}
 
 		// Retrieve and upload multiple images
 		multipleImages := r.MultipartForm.File["multipleimages"]
+		var multipleImageURLs []string
 		for i, fileHeader := range multipleImages {
 			file, err := fileHeader.Open()
 			if err != nil {
@@ -305,23 +324,31 @@ func handleFormData(db *sql.DB, minioClient *minio.Client, bucketName string, en
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
-			defer file.Close()
+
 			imageData, err := io.ReadAll(file)
 			if err != nil {
 				log.Printf("Error reading multiple image %d: %v", i, err)
 				http.Error(w, err.Error(), http.StatusInternalServerError)
+				file.Close() // Close the file in case of error
 				return
 			}
+
+			// Close the file after reading its content
+			file.Close()
+
 			objectName := fmt.Sprintf("%d-multipleimage-%d.jpeg", time.Now().UnixNano(), i)
-			imageURL, err := uploadToMinIO(minioClient, endpoint, bucketName, objectName, imageData)
+			imageURLs, err := uploadToMinIO(minioClient, endpoint, bucketName, []string{objectName}, [][]byte{imageData})
 			if err != nil {
 				log.Printf("Error uploading multiple image %d to MinIO: %v", i, err)
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
-			formData.MultipleImages = append(formData.MultipleImages, imageURL)
-			log.Println("Uploaded Multiple Image:", imageURL)
+
+			multipleImageURLs = append(multipleImageURLs, imageURLs[0])
+			log.Println("Uploaded Multiple Image:", imageURLs[0])
 		}
+
+		formData.MultipleImages = multipleImageURLs
 
 		// Insert form data into the database (if applicable)
 		if db != nil {
