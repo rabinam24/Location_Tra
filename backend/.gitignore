@@ -16,3 +16,4 @@ build/
 buildStaticReactVite
 dummy
 uploads
+logs

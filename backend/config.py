@@ -8,7 +8,9 @@ CORS(app)
 # SQLALCHEMY_DATABASE_URI = 'postgresql://postgres:acharya@localhost/test'  # Replace with your database URL
 # SQLALCHEMY_TRACK_MODIFICATIONS = False  # Recommended for performance
 
-app.config["SQLALCHEMY_DATABASE_URI"]='postgresql://postgres:acharya@localhost/test'
+# app.config["SQLALCHEMY_DATABASE_URI"]='postgresql://postgres:acharya@localhost/test'
+# app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///mydatabase.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db = SQLAlchemy(app)

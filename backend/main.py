@@ -14,12 +14,19 @@ from wtforms import Form,StringField,FloatField,FileField
 
 from werkzeug.utils import secure_filename
 import os
-
+import logging
 app = Flask(__name__)
 
 CORS(app)  # Enable CORS for all routes
 # CORS(app, origins='http://localhost:5173')  # Allow requests only from http://localhost:5173
+import sqlite3
 
+# Set up logging
+if not os.path.exists('logs'):
+    os.makedirs('logs')
+logging.basicConfig(filename='logs/form_data.log', level=logging.INFO,
+                    format='%(asctime)s %(levelname)s %(message)s')
+logger = logging.getLogger()
 
 
 from flask import send_file,send_from_directory
@@ -228,7 +235,15 @@ def submit_user_form():
             pass
         else:
             return jsonify({"error":"please enter only yes and no boolean values in availableisp"})
-                
+        
+        form_data_log = request.form.to_dict()
+        file_data_log = request.files.to_dict()
+        # Log form data
+        logger.info(f"Form data received: {form_data_log}")
+        # Log file data (file names and content types)
+        for filename_log, file_log in file_data_log.items():
+            logger.info(f"File received: {filename_log} (content type: {file_log.content_type})")
+
 
 
         # Save the uploaded files
@@ -305,7 +320,20 @@ def submit_user_form():
         if form_object.validate():
             print("form submission successful")
             print("yahoo!")
-            unordered_data = {"form_submission_success":True,"selectpole":selectpole,"selectpolestatus":selectpolestatus,"location":submit_data['location'],"latitude":submit_data['latitude'],"longitude":submit_data['longitude'],"description":description,"poleimage":str(encoded_string),"poleimagename":str(filename)}
+            unordered_data = {"form_submission_success":True,"selectpole":selectpole,"selectpolestatus":selectpolestatus,"location":submit_data['location'],"latitude":submit_data['latitude'],"longitude":submit_data['longitude'],"description":description,"poleimage":str(encoded_string),"poleimagename":str(filename),"message": "Form data logged successfully"}
+
+            # response_data = OrderedDict([
+            #     ("form_submission_success", True),
+            #     ("location", submit_data['location']),
+            #     ("latitude", submit_data['latitude']),
+            #     ("longitude", submit_data['longitude']),
+            #     ("description", description),
+            #     ("selectpole", selectpole),
+            #     ("selectpolestatus", selectpolestatus),
+            #     ("poleimage", str(encoded_string)),
+            #     ("poleimagename", str(filename)),
+            #     ("message":"Form data logged successfully")
+            # ])
 
             response_data = OrderedDict([
                 ("form_submission_success", True),
@@ -317,7 +345,9 @@ def submit_user_form():
                 ("selectpolestatus", selectpolestatus),
                 ("poleimage", str(encoded_string)),
                 ("poleimagename", str(filename)),
+                ("message", "Form data logged successfully")
             ])
+
 
             # response_data_sorted = dict(sorted(response_data.items(), key=lambda item: item[0]))
 
