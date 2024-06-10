@@ -36,14 +36,30 @@ const Form = () => {
   const [successMessage, setSuccessMessage] = useState("");
   const [showUserData, setShowUserData] = useState(false);
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    //Custom Validation for GPS location
-    setUserInfo((prevUserInfo) => ({
-      ...prevUserInfo,
-      [name]: value,
-    }));
-  };
+  // const handleChange = (e) => {
+  //   const { name, value } = e.target;
+  //   //Custom Validation for GPS location
+  //   setUserInfo((prevUserInfo) => ({
+  //     ...prevUserInfo,
+  //     [name]: value,
+  //   }));
+  // };
+
+  const handleChange = (event) => {
+    const { name, files } = event.target;
+    if (files) {
+        setUserInfo((prevState) => ({
+            ...prevState,
+            [name]: files[0], // For single file input
+        }));
+    } else {
+        const { name, value } = event.target;
+        setUserInfo((prevState) => ({
+            ...prevState,
+            [name]: value,
+        }));
+    }
+};
 
   const handleGetGPSLocation = () => {
     navigator.geolocation.getCurrentPosition(
@@ -119,67 +135,67 @@ const Form = () => {
   const handleSubmit = async (event) => {
     event.preventDefault();
     try {
-      const formData = new FormData();
+        const formData = new FormData();
 
-      // Append fields to formData
-      formData.append("location", userInfo.location);
-      formData.append("latitude", parseFloat(userInfo.latitude));
-      formData.append("longitude", parseFloat(userInfo.longitude));
-      formData.append("selectpole", userInfo.selectpole);
-      formData.append("selectpolestatus", userInfo.selectpolestatus);
-      formData.append("selectpolelocation", userInfo.selectpolelocation);
-      formData.append("description", userInfo.description);
+        // Append fields to formData
+        formData.append("location", userInfo.location);
+        formData.append("latitude", parseFloat(userInfo.latitude));
+        formData.append("longitude", parseFloat(userInfo.longitude));
+        formData.append("selectpole", userInfo.selectpole);
+        formData.append("selectpolestatus", userInfo.selectpolestatus);
+        formData.append("selectpolelocation", userInfo.selectpolelocation);
+        formData.append("description", userInfo.description);
 
-      if (userInfo.poleimage) {
-        formData.append("poleimage", userInfo.poleimage);
-      }
-
-      formData.append("availableisp", userInfo.availableisp);
-      formData.append("selectisp", userInfo.selectisp);
-
-      for (let i = 0; i < userInfo.multipleimages.length; i++) {
-        formData.append("multipleimages", userInfo.multipleimages[i]);
-      }
-
-      // Log the formData content for debugging
-      for (let pair of formData.entries()) {
-        console.log(pair[0] + ": " + pair[1]);
-      }
-
-      const response = await axios.post(
-        "http://localhost:8080/submit-form",
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
+        if (userInfo.poleimage) {
+            formData.append("image", userInfo.poleimage); // Ensure the key is "image"
         }
-      );
 
-      console.log("Data inserted successfully:", response.data);
-      setSuccessMessage("Data inserted successfully!");
-      setTimeout(() => {
-        setSuccessMessage("");
-      }, 2000);
+        formData.append("availableisp", userInfo.availableisp);
+        formData.append("selectisp", userInfo.selectisp);
 
-      setUserInfo({
-        location: "",
-        latitude: "",
-        longitude: "",
-        selectpole: "",
-        selectpolestatus: "",
-        selectpolelocation: "",
-        description: "",
-        poleimage: null,
-        availableisp: "",
-        selectisp: "",
-        multipleimages: [],
-      });
+        for (let i = 0; i < userInfo.multipleimages.length; i++) {
+            formData.append("multipleimages", userInfo.multipleimages[i]);
+        }
+
+        // Log the formData content for debugging
+        for (let pair of formData.entries()) {
+            console.log(pair[0] + ": " + pair[1]);
+        }
+
+        const response = await axios.post(
+            "http://localhost:8080/submit-form",
+            formData,
+            {
+                headers: {
+                    "Content-Type": "multipart/form-data",
+                },
+            }
+        );
+
+        console.log("Data inserted successfully:", response.data);
+        setSuccessMessage("Data inserted successfully!");
+        setTimeout(() => {
+            setSuccessMessage("");
+        }, 2000);
+
+        setUserInfo({
+            location: "",
+            latitude: "",
+            longitude: "",
+            selectpole: "",
+            selectpolestatus: "",
+            selectpolelocation: "",
+            description: "",
+            poleimage: "",
+            availableisp: "",
+            selectisp: "",
+            multipleimages: [],
+        });
     } catch (error) {
-      console.error("Error inserting data:", error);
+        console.error("Error inserting data:", error);
     }
-  };
-
+};
+  
   const handleAddMore = () => {
     const newAdditionalInfo = {
       selectisp: "",
@@ -302,13 +318,12 @@ const Form = () => {
 
         <FormLabel>Pole Image</FormLabel>
         <input
-          type="file"
-          name="image"
-          accept="image/*"
-          onChange={handleChange}
-          style={{ margin: "8px 0" }}
+            type="file"
+            name="poleimage"
+            accept="image/*"
+            onChange={handleChange}
+            style={{ margin: "8px 0" }}
         />
-
         <FormControl component="fieldset" style={{ margin: "8px 0" }}>
           <FormLabel component="legend">Available ISP</FormLabel>
           <RadioGroup

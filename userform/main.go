@@ -48,14 +48,6 @@ type StartEnd struct {
 	TripEndTime   time.Time `json:"-"`
 }
 
-const (
-	host     = "localhost"
-	port     = 5432
-	user     = "binam"
-	password = "Bhandari"
-	dbname   = "binam"
-)
-
 var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
 		return true
@@ -215,20 +207,30 @@ func insertTripData(db *sql.DB, startEnd StartEnd) error {
 	return nil
 }
 
-func uploadToMinIO(client *minio.Client, bucketName, objectName string, fileData []byte) (string, error) {
-	_, err := client.PutObject(
-		bucketName,
-		objectName,
-		bytes.NewReader(fileData),
-		int64(len(fileData)),
-		minio.PutObjectOptions{ContentType: "application/octet-stream"},
-	)
+//	func uploadToMinIO(client *minio.Client, bucketName, objectName string, fileData []byte) (string, error) {
+//		_, err := client.PutObject(
+//			bucketName,
+//			objectName,
+//			bytes.NewReader(fileData),
+//			int64(len(fileData)),
+//			minio.PutObjectOptions{ContentType: "application/octet-stream"},
+//		)
+//		if err != nil {
+//			return "", err
+//		}
+//		// Manually construct the URL using the endpoint, bucket name, and object name
+//		fileURL := fmt.Sprintf("http://%s/%s/%s", "play.min.io", bucketName, objectName)
+//		return fileURL, nil
+//	}
+func uploadToMinIO(minioClient *minio.Client, endpoint, bucketName, objectName string, data []byte) (string, error) {
+	reader := bytes.NewReader(data)
+	_, err := minioClient.PutObject(bucketName, objectName, reader, int64(reader.Len()), minio.PutObjectOptions{
+		ContentType: "image/jpeg",
+	})
 	if err != nil {
 		return "", err
 	}
-	// Manually construct the URL using the endpoint, bucket name, and object name
-	fileURL := fmt.Sprintf("http://%s/%s/%s", "play.min.io", bucketName, objectName)
-	return fileURL, nil
+	return fmt.Sprintf("http://%s/%s/%s", endpoint, bucketName, objectName), nil
 }
 
 func insertData(db *sql.DB, formData FormData) error {
@@ -245,14 +247,17 @@ func insertData(db *sql.DB, formData FormData) error {
 	return err
 }
 
-func handleFormData(db *sql.DB, minioClient *minio.Client, bucketName string) http.HandlerFunc {
+func handleFormData(db *sql.DB, minioClient *minio.Client, bucketName string, endpoint string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var formData FormData
 		err := r.ParseMultipartForm(10 << 20) // Parse multipart form data with a max of 10 MB
 		if err != nil {
+			log.Printf("Error parsing multipart form: %v", err)
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
+
+		log.Println("MultipartForm:", r.MultipartForm)
 
 		// Retrieve form fields
 		formData.Location = r.FormValue("location")
@@ -265,22 +270,30 @@ func handleFormData(db *sql.DB, minioClient *minio.Client, bucketName string) ht
 		formData.AvailableISP = r.FormValue("availableisp")
 		formData.SelectISP = r.FormValue("selectisp")
 
+		// Log received form fields
+		log.Println("Form Data:", formData)
+
 		// Retrieve and upload single image
 		file, _, err := r.FormFile("image")
-		if err == nil {
+		if err != nil {
+			log.Printf("Error retrieving single image: %v", err)
+		} else {
 			defer file.Close()
 			poleImageData, err := io.ReadAll(file)
 			if err != nil {
+				log.Printf("Error reading single image: %v", err)
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
-			poleImageName := fmt.Sprintf("%d-poleimage.jpg", time.Now().UnixNano())
-			poleImageURL, err := uploadToMinIO(minioClient, bucketName, poleImageName, poleImageData)
+			poleImageName := fmt.Sprintf("%d-poleimage.jpeg", time.Now().UnixNano())
+			poleImageURL, err := uploadToMinIO(minioClient, endpoint, bucketName, poleImageName, poleImageData)
 			if err != nil {
+				log.Printf("Error uploading single image to MinIO: %v", err)
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
 			formData.PoleImage = poleImageURL
+			log.Println("Uploaded Pole Image:", poleImageURL)
 		}
 
 		// Retrieve and upload multiple images
@@ -288,34 +301,42 @@ func handleFormData(db *sql.DB, minioClient *minio.Client, bucketName string) ht
 		for i, fileHeader := range multipleImages {
 			file, err := fileHeader.Open()
 			if err != nil {
+				log.Printf("Error opening multiple image %d: %v", i, err)
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
 			defer file.Close()
 			imageData, err := io.ReadAll(file)
 			if err != nil {
+				log.Printf("Error reading multiple image %d: %v", i, err)
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
-			objectName := fmt.Sprintf("%d-multipleimage-%d.jpg", time.Now().UnixNano(), i)
-			imageURL, err := uploadToMinIO(minioClient, bucketName, objectName, imageData)
+			objectName := fmt.Sprintf("%d-multipleimage-%d.jpeg", time.Now().UnixNano(), i)
+			imageURL, err := uploadToMinIO(minioClient, endpoint, bucketName, objectName, imageData)
 			if err != nil {
+				log.Printf("Error uploading multiple image %d to MinIO: %v", i, err)
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
 			formData.MultipleImages = append(formData.MultipleImages, imageURL)
+			log.Println("Uploaded Multiple Image:", imageURL)
 		}
 
-		// Insert form data into the database
-		if err := insertData(db, formData); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
+		// Insert form data into the database (if applicable)
+		if db != nil {
+			if err := insertData(db, formData); err != nil {
+				log.Printf("Error inserting data into database: %v", err)
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
 		}
 
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("Data inserted successfully"))
 	}
 }
+
 func handleUserData(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		log.Println("Fetching user data...")
@@ -483,10 +504,11 @@ func connectDB(cfg config) (*sql.DB, error) {
 
 func main() {
 	// Initialize MinIO client
-	endpoint := "play.min.io"
-	accessKeyID := "4cEtgUVNyeS0Jej9FIWh"
-	secretAccessKey := "fgtX96NY97yrWPeV224ZhO4gbxflvm1DCMZccluT"
-	useSSL := true
+	endpoint := "172.17.0.1:9000"
+
+	accessKeyID := "JJiBrYDyIGUpRlXpTl00"
+	secretAccessKey := "lqD6aBXF5C793HQgOtZuQKlUwB5R5Z95FcLQFmU4"
+	useSSL := false
 
 	client, err := minio.New(endpoint, accessKeyID, secretAccessKey, useSSL)
 	if err != nil {
@@ -500,7 +522,7 @@ func main() {
 
 	if cfg.db.dsn == "" {
 		host := "localhost"
-		port := 5432 // your_port
+		port := 5432
 		user := "binam"
 		password := "Bhandari"
 		dbname := "binam"
@@ -516,7 +538,7 @@ func main() {
 
 	// Set up HTTP handlers with required parameters
 	bucketName := "location-tracker"
-	http.HandleFunc("/submit-form", handleFormData(db, client, bucketName))
+	http.HandleFunc("/submit-form", handleFormData(db, client, bucketName, endpoint))
 	http.HandleFunc("/user-data", handleUserData(db))
 	http.HandleFunc("/api/data/", handleDeleteData(db))
 	http.HandleFunc("/api/gps-data", handlegetGpsData(db))
