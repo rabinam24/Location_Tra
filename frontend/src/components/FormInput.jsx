@@ -48,10 +48,19 @@ const Form = () => {
   const handleChange = (event) => {
     const { name, files } = event.target;
     if (files) {
-        setUserInfo((prevState) => ({
-            ...prevState,
-            [name]: files[0], // For single file input
-        }));
+        if (files.length === 1) {
+            // For single file input
+            setUserInfo((prevState) => ({
+                ...prevState,
+                [name]: files[0],
+            }));
+        } else {
+            // For multiple file input
+            setUserInfo((prevState) => ({
+                ...prevState,
+                [name]: files,
+            }));
+        }
     } else {
         const { name, value } = event.target;
         setUserInfo((prevState) => ({
@@ -60,6 +69,7 @@ const Form = () => {
         }));
     }
 };
+
 
   const handleGetGPSLocation = () => {
     navigator.geolocation.getCurrentPosition(
@@ -93,44 +103,8 @@ const Form = () => {
     console.log("Update slider images", products);
   };
 
-  // const handleSubmit = async (event) => {
-  //   event.preventDefault();
-  //   try {
-  //     // Convert latitude and longitude to numbers
-  //     const dataToSubmit = {
-  //       ...userInfo,
-  //       latitude: parseFloat(userInfo.latitude),
-  //       longitude: parseFloat(userInfo.longitude),
-  //       multipleimages: userInfo.multipleimages.join(','), // Convert array to string
-  //     };
-  //     const response = await axios.post(
-  //       "http://localhost:8080/submit-form",
-  //       dataToSubmit
-  //     );
-  //     console.log("Data inserted successfully:", response.data);
-  //     setSuccessMessage("Data inserted successfully!");
-  //     setTimeout(() => {
-  //       setSuccessMessage("");
-  //     }, 1500);
 
-  //     // Clear the form data
-  //     setUserInfo({
-  //       location: "",
-  //       latitude: "",
-  //       longitude: "",
-  //       selectpole: "",
-  //       selectpolestatus: "",
-  //       selectpolelocation: "",
-  //       description: "",
-  //       poleimage: "",
-  //       availableisp: "",
-  //       selectisp: "",
-  //       multipleimages: [],
-  //     });
-  //   } catch (error) {
-  //     console.error("Error inserting data:", error);
-  //   }
-  // };
+
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -357,9 +331,10 @@ const Form = () => {
             <input
               multiple
               type="file"
-              accept="images/*"
               name="multipleimages"
-              onChange={handleSliderImages}
+              accept="multipleimages/*"
+              // onChange={handleSliderImages}
+              onChange={handleChange}
               style={{ margin: "8px 0" }}
             />
 
