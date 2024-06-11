@@ -1,11 +1,18 @@
 from flask import Flask
 from flask_cors import CORS
 from config import db
+import secrets
+from flask_jwt_extended import JWTManager,jwt_required,create_access_token,get_jwt_identity
 app = Flask(__name__)
 CORS(app)
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///bib.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-db.init_app(app)
+# Generate a JWT secret key
+jwt_secret_key = secrets.token_hex(16)
+app.config['JWT_SECRET_KEY'] = jwt_secret_key
+jwt = JWTManager(app)
+print("JWT SECRET KEY = ",app.config['JWT_SECRET_KEY'],"type  = ",type(app.config['JWT_SECRET_KEY']))
+db.init_app(app) # necessary to initialize it when db obejct is in another file like config.py
 from datetime import datetime
 class student(db.Model):
     roll = db.Column(db.Integer,primary_key=True)

@@ -3,21 +3,39 @@ import base64
 from PIL import Image
 # from collections import OrderedDict
 from collections import OrderedDict
-
+import secrets
+from flask_jwt_extended import JWTManager,jwt_required,create_access_token,get_jwt_identity
 from flask import Flask, request, jsonify
 from datetime import datetime
 
 from flask_cors import CORS
-from models import UserForm, db
+# from models import UserForm, db
 
 from wtforms import Form,StringField,FloatField,FileField
 
 from werkzeug.utils import secure_filename
 import os
 import logging
+from config import db
 app = Flask(__name__)
-
+from flask_sqlalchemy import SQLAlchemy
+app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///mydatabase.db"
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+# db =SQLAlCHEMY(app)
+# db = SQLAlchemy()
+# db.init_app(app)  #not needed when db is in the same file like main.py here
+db.init_app(app)
+# Generate a JWT secret key
+jwt_secret_key = secrets.token_hex(16)
+app.config['JWT_SECRET_KEY'] = jwt_secret_key
+jwt = JWTManager(app)
 CORS(app)  # Enable CORS for all routes
+# Mock Database
+userData = {
+    'id':1 ,# MockData primary key id
+    'location':'nepalgunj'
+}
+
 # CORS(app, origins='http://localhost:5173')  # Allow requests only from http://localhost:5173
 # import sqlite3
 # db.create_all()
@@ -167,6 +185,10 @@ def submit_user_form():
         return data
    
     elif request.method == 'POST':
+        # if db.app is not None:
+        #     return jsonify({"Message":"Database has been initialized."})
+        # else:
+        #     return({"message":"Database has not been initialized."})
         form_data = request.form
         # form_data = request.json
         # files = request.files['poleimage']
@@ -353,6 +375,12 @@ def submit_user_form():
                 ("poleimagename", str(filename)),
                 ("message", "Form data logged successfully")
             ])
+            # Authentication Logic
+            if location in userData['location']:
+                return jsonify({"message":f"location {location} already present in database..skipping creation"})
+
+            else:
+                jsonify({"message":f"need to create data {location} in database"})
 
 
             # response_data_sorted = dict(sorted(response_data.items(), key=lambda item: item[0]))
@@ -367,6 +395,7 @@ def submit_user_form():
             print("form submission not successful")
             return jsonify({"form_submission_success":False,"errors":all_errors}), 400
         
+      
 
         # commenting the below code for now
         # return jsonify({"location":f"{test1}","gpslocation":f"{test2}","description":"empty"})
