@@ -78,7 +78,7 @@ def allowed_file(filename):
 # app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:acharya@localhost/test'
 # app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 # db.init_app(app)  # Initialize database
-print("Database initialized successfully")
+# print("Database initialized successfully")
 app.config['UPLOAD_FOLDER'] = 'uploads'
 
 # @app.route('/submit-user-form', methods=['POST'])
