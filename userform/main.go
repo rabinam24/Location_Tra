@@ -314,65 +314,42 @@ func handleFormData(db *sql.DB, minioClient *minio.Client, bucketName string, en
 			log.Println("Uploaded Pole Image:", poleImageURLs[0])
 		}
 
-		files, _, err := r.FormFile("multipleimages")
-		if err != nil {
-			log.Printf("Error retrieving multiple images: %v", err)
-		} else {
-			defer files.Close()
-			multipleimageData, err := io.ReadAll(files)
+		// Retrieve and upload multiple images
+		multipleImages := r.MultipartForm.File["multipleimages"] // Adjusted here
+		var multipleImageURLs []string
+		for i, fileHeader := range multipleImages {
+			file, err := fileHeader.Open()
 			if err != nil {
-				log.Printf("Error reading the multipleimages : %v", err)
+				log.Printf("Error opening multiple image %d: %v", i, err)
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
-			multipleImageName := fmt.Sprintf("%d-multipleimage.jpeg", time.Now().UnixNano())
-			multipleImageURLs, err := uploadToMinIO(minioClient, endpoint, bucketName,
-				[]string{multipleImageName}, [][]byte{multipleimageData})
+
+			imageData, err := io.ReadAll(file)
 			if err != nil {
-				log.Printf("Error uploading multiple images to MINIO: %v", err)
+				log.Printf("Error reading multiple image %d: %v", i, err)
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				file.Close() // Close the file in case of error
+				return
+			}
+
+			// Close the file after reading its content
+			defer file.Close()
+
+			objectName := fmt.Sprintf("%d-multipleimage-%d.jpeg", time.Now().UnixNano(), i)
+			imageURLs, err := uploadToMinIO(minioClient, endpoint, bucketName, []string{objectName}, [][]byte{imageData})
+			if err != nil {
+				log.Printf("Error uploading multiple image %d to MinIO: %v", i, err)
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
+
+			multipleImageURLs = append(multipleImageURLs, imageURLs[0])
 			formData.MultipleImages = multipleImageURLs
-			log.Println("Uploaded MultipleImages:", multipleImageURLs)
+			log.Println("Uploaded Multiple Image:", imageURLs[0])
+			log.Printf("Multiple Images: %+v", r.MultipartForm.File["multipleimages[]"])
+
 		}
-
-		// // Retrieve and upload multiple images
-		// multipleImages := r.MultipartForm.File["multipleimages[]"] // Adjusted here
-		// var multipleImageURLs []string
-		// for i, fileHeader := range multipleImages {
-		// 	file, err := fileHeader.Open()
-		// 	if err != nil {
-		// 		log.Printf("Error opening multiple image %d: %v", i, err)
-		// 		http.Error(w, err.Error(), http.StatusInternalServerError)
-		// 		return
-		// 	}
-
-		// 	imageData, err := io.ReadAll(file)
-		// 	if err != nil {
-		// 		log.Printf("Error reading multiple image %d: %v", i, err)
-		// 		http.Error(w, err.Error(), http.StatusInternalServerError)
-		// 		file.Close() // Close the file in case of error
-		// 		return
-		// 	}
-
-		// 	// Close the file after reading its content
-		// 	defer file.Close()
-
-		// 	objectName := fmt.Sprintf("%d-multipleimage-%d.jpeg", time.Now().UnixNano(), i)
-		// 	imageURLs, err := uploadToMinIO(minioClient, endpoint, bucketName, []string{objectName}, [][]byte{imageData})
-		// 	if err != nil {
-		// 		log.Printf("Error uploading multiple image %d to MinIO: %v", i, err)
-		// 		http.Error(w, err.Error(), http.StatusInternalServerError)
-		// 		return
-		// 	}
-
-		// 	multipleImageURLs = append(multipleImageURLs, imageURLs[0])
-		// 	formData.MultipleImages = multipleImageURLs
-		// 	log.Println("Uploaded Multiple Image:", imageURLs[0])
-		// 	log.Printf("Multiple Images: %+v", r.MultipartForm.File["multipleimages[]"])
-
-		// }
 
 		// Insert form data into the database (if applicable)
 		if db != nil {
