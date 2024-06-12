@@ -206,32 +206,6 @@ func insertTripData(db *sql.DB, startEnd StartEnd) error {
 	return nil
 }
 
-//	func uploadToMinIO(client *minio.Client, bucketName, objectName string, fileData []byte) (string, error) {
-//		_, err := client.PutObject(
-//			bucketName,
-//			objectName,
-//			bytes.NewReader(fileData),
-//			int64(len(fileData)),
-//			minio.PutObjectOptions{ContentType: "application/octet-stream"},
-//		)
-//		if err != nil {
-//			return "", err
-//		}
-//		// Manually construct the URL using the endpoint, bucket name, and object name
-//		fileURL := fmt.Sprintf("http://%s/%s/%s", "play.min.io", bucketName, objectName)
-//		return fileURL, nil
-//	}
-//
-//	func uploadToMinIO(minioClient *minio.Client, endpoint, bucketName, objectName string, data []byte) (string, error) {
-//		reader := bytes.NewReader(data)
-//		_, err := minioClient.PutObject(bucketName, objectName, reader, int64(reader.Len()), minio.PutObjectOptions{
-//			ContentType: "image/jpeg",
-//		})
-//		if err != nil {
-//			return "", err
-//		}
-//		return fmt.Sprintf("http://%s/%s/%s", endpoint, bucketName, objectName), nil
-//	}
 func uploadToMinIO(minioClient *minio.Client, endpoint, bucketName string, objectNames []string, imageDatas [][]byte) ([]string, error) {
 	var imageURLs []string
 
@@ -427,7 +401,6 @@ func handleGetFormData(db *sql.DB) http.HandlerFunc {
 		for rows.Next() {
 			var formData FormData
 			var multipleImagesJSON sql.NullString // Use sql.NullString to handle NULL values
-
 			// Scan row values into variables
 			err := rows.Scan(&formData.ID, &formData.Location, &formData.Latitude, &formData.Longitude, &formData.SelectPole, &formData.SelectPoleStatus, &formData.SelectPoleLocation, &formData.Description, &formData.PoleImage, &formData.AvailableISP, &formData.SelectISP, &multipleImagesJSON, &formData.CreatedAt)
 			if err != nil {
@@ -435,7 +408,6 @@ func handleGetFormData(db *sql.DB) http.HandlerFunc {
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 				return
 			}
-
 			// Check if JSON data is empty or NULL
 			if multipleImagesJSON.Valid && multipleImagesJSON.String != "" {
 				// Convert the JSON string back to a slice of strings only if it's not empty
@@ -445,17 +417,14 @@ func handleGetFormData(db *sql.DB) http.HandlerFunc {
 					return
 				}
 			}
-
 			// Append form data to the slice
 			data = append(data, formData)
 		}
-
 		if err := rows.Err(); err != nil {
 			log.Printf("Row error: %v", err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
-
 		// Set response header and encode data as JSON
 		w.Header().Set("Content-Type", "application/json")
 		if err := json.NewEncoder(w).Encode(data); err != nil {
@@ -475,11 +444,9 @@ func handleUserPoleImage(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Query to select the latest pole image URL and multiple images URLs from the database
 		query := `SELECT poleimage, multipleimages FROM userform ORDER BY created_at DESC LIMIT 1`
-
 		row := db.QueryRow(query)
 		var poleImage string
 		var multipleImagesJSON sql.NullString // Use sql.NullString to handle NULL values
-
 		err := row.Scan(&poleImage, &multipleImagesJSON)
 		if err != nil {
 			if err == sql.ErrNoRows {
@@ -492,12 +459,10 @@ func handleUserPoleImage(db *sql.DB) http.HandlerFunc {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-
 		// Prepare response data
 		response := map[string]interface{}{
 			"poleImage": poleImage,
 		}
-
 		if multipleImagesJSON.Valid && multipleImagesJSON.String != "" {
 			var multipleImages []string
 			if err := json.Unmarshal([]byte(multipleImagesJSON.String), &multipleImages); err != nil {
@@ -509,7 +474,6 @@ func handleUserPoleImage(db *sql.DB) http.HandlerFunc {
 		} else {
 			response["multipleImages"] = []string{}
 		}
-
 		// Send the image URLs to the frontend
 		w.Header().Set("Content-Type", "application/json")
 		if err := json.NewEncoder(w).Encode(response); err != nil {
