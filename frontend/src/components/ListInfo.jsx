@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-// import EditForm from "./EditForm";
 import "../ListInfo.css";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
@@ -22,7 +21,7 @@ const List = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await axios.get("http://localhost:8080/user-data");
+        const response = await axios.get("http://localhost:8080/get-form-data");
         setAllInfo(response.data);
       } catch (error) {
         console.error("Error fetching user data:", error);
@@ -99,23 +98,16 @@ const List = () => {
                 <TableCell>{info.description}</TableCell>
                 <TableCell>
                   {info.poleimage && (
-                    <img
-                      src={`data:image/jpeg;base64,${info.poleimage}`}
-                      alt="Pole Image"
-                      style={{ maxWidth: "100px" }}
-                    />
+                    <img src={info.poleimage} alt="Pole" style={{ width: "100px", height: "100px" }} />
                   )}
                 </TableCell>
                 <TableCell>{info.availableisp}</TableCell>
                 <TableCell>{info.selectisp}</TableCell>
                 <TableCell>
-                  {info.multipleimages &&
-                    Array.isArray(info.multipleimages) &&
-                    info.multipleimages.map((image, index) => (
-                      <img key={index} src={image} alt={`Image ${index}`} />
-                    ))}
+                  {info.multipleimages && info.multipleimages.map((image, index) => (
+                    <img key={index} src={image} alt={`Multiple ${index}`} style={{ width: "100px", height: "100px" }} />
+                  ))}
                 </TableCell>
-
                 <TableCell>
                   <button
                     className="delete-button"
@@ -147,13 +139,13 @@ const List = () => {
       )}
       {edit && (
         <div className="edit-form-container">
-          <EditForm
+          {/* <EditForm
             editContent={editContent}
             setEditContent={setEditContent}
             setEdit={setEdit}
             allInfo={allInfo}
             setAllInfo={setAllInfo}
-          />
+          /> */}
         </div>
       )}
     </div>

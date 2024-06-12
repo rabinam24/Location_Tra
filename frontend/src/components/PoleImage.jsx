@@ -1,30 +1,43 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 
-const ImageGallery = () => {
-  const [images, setImages] = useState([]);
+const LatestPoleImage = () => {
+  const [poleImage, setPoleImage] = useState(null);
+  const [multipleImages, setMultipleImages] = useState([]);
 
   useEffect(() => {
-    axios.get("http://localhost:8080/api/pole-image")
-      .then(response => {
-        // Check if response data is not empty
-        if (response.data) {
-          setImages([response.data]); // Wrap single image data in an array
-          console.log(response);
-        }
-      })
-      .catch(error => { 
-        console.error("Error fetching images:", error);
-      });
+    const fetchPoleImage = async () => {
+      try {
+        const response = await axios.get("http://localhost:8080/api/pole-image");
+        console.log(response.data); // Log the response to verify the URLs
+        setPoleImage(response.data.poleImage);
+        setMultipleImages(response.data.multipleImages);
+      } catch (error) {
+        console.error("Error fetching pole image:", error);
+      }
+    };
+
+    fetchPoleImage();
   }, []);
 
   return (
     <div>
-      {images.map((base64Image, index) => (
-        <img key={index} src={`data:image/jpeg;base64,${base64Image}`} alt={`Image ${index}`} />
-      ))}
+      {poleImage && (
+        <div>
+          <h2>Pole Image</h2>
+          <img src={poleImage} alt="Pole" style={{ width: "100px", height: "100px" }} />
+        </div>
+      )}
+      {multipleImages.length > 0 && (
+        <div>
+          <h2>Multiple Images</h2>
+          {multipleImages.map((image, index) => (
+            <img key={index} src={image} alt={`Multiple ${index}`} style={{ width: "100px", height: "100px" }} />
+          ))}
+        </div>
+      )}
     </div>
   );
 };
 
-export default ImageGallery;
+export default LatestPoleImage;

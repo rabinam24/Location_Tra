@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"database/sql"
-	"encoding/base64"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -314,41 +313,36 @@ func handleFormData(db *sql.DB, minioClient *minio.Client, bucketName string, en
 			log.Println("Uploaded Pole Image:", poleImageURLs[0])
 		}
 
-		// Retrieve and upload multiple images
-		multipleImages := r.MultipartForm.File["multipleimages"] // Adjusted here
+		multipleImagess := r.MultipartForm.File["multipleimages"]
 		var multipleImageURLs []string
-		for i, fileHeader := range multipleImages {
+		for i, fileHeader := range multipleImagess {
 			file, err := fileHeader.Open()
 			if err != nil {
 				log.Printf("Error opening multiple image %d: %v", i, err)
 				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
 
+			}
 			imageData, err := io.ReadAll(file)
 			if err != nil {
-				log.Printf("Error reading multiple image %d: %v", i, err)
+				log.Printf("Error reading the multiple image %d:%v", i, err)
 				http.Error(w, err.Error(), http.StatusInternalServerError)
-				file.Close() // Close the file in case of error
+				file.Close()
 				return
 			}
-
-			// Close the file after reading its content
+			// closing the file after reaading its content
 			defer file.Close()
 
 			objectName := fmt.Sprintf("%d-multipleimage-%d.jpeg", time.Now().UnixNano(), i)
 			imageURLs, err := uploadToMinIO(minioClient, endpoint, bucketName, []string{objectName}, [][]byte{imageData})
 			if err != nil {
-				log.Printf("Error uploading multiple image %d to MinIO: %v", i, err)
+				log.Printf("Error uploading multiple image %d to MinIo: %v", i, err)
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
+
 			}
-
-			multipleImageURLs = append(multipleImageURLs, imageURLs[0])
+			multipleImageURLs = append(multipleImageURLs, imageURLs...)
 			formData.MultipleImages = multipleImageURLs
-			log.Println("Uploaded Multiple Image:", imageURLs[0])
-			log.Printf("Multiple Images: %+v", r.MultipartForm.File["multipleimages[]"])
-
+			log.Println("Uploaded multiple images:", imageURLs)
 		}
 
 		// Insert form data into the database (if applicable)
@@ -419,6 +413,59 @@ func handleUserData(db *sql.DB) http.HandlerFunc {
 	}
 }
 
+func handleGetFormData(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		rows, err := db.Query("SELECT id, location, latitude, longitude, selectpole, selectpolestatus, selectpolelocation, description, poleimage, availableisp, selectisp, multipleimages, created_at FROM userform")
+		if err != nil {
+			log.Printf("Error querying database: %v", err)
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+		defer rows.Close()
+
+		var data []FormData
+		for rows.Next() {
+			var formData FormData
+			var multipleImagesJSON sql.NullString // Use sql.NullString to handle NULL values
+
+			// Scan row values into variables
+			err := rows.Scan(&formData.ID, &formData.Location, &formData.Latitude, &formData.Longitude, &formData.SelectPole, &formData.SelectPoleStatus, &formData.SelectPoleLocation, &formData.Description, &formData.PoleImage, &formData.AvailableISP, &formData.SelectISP, &multipleImagesJSON, &formData.CreatedAt)
+			if err != nil {
+				log.Printf("Error scanning row: %v", err)
+				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+				return
+			}
+
+			// Check if JSON data is empty or NULL
+			if multipleImagesJSON.Valid && multipleImagesJSON.String != "" {
+				// Convert the JSON string back to a slice of strings only if it's not empty
+				if err := json.Unmarshal([]byte(multipleImagesJSON.String), &formData.MultipleImages); err != nil {
+					log.Printf("Error unmarshalling JSON: %v", err)
+					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+					return
+				}
+			}
+
+			// Append form data to the slice
+			data = append(data, formData)
+		}
+
+		if err := rows.Err(); err != nil {
+			log.Printf("Row error: %v", err)
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+
+		// Set response header and encode data as JSON
+		w.Header().Set("Content-Type", "application/json")
+		if err := json.NewEncoder(w).Encode(data); err != nil {
+			log.Printf("Error encoding response: %v", err)
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+	}
+}
+
 func isInvalidFloat(value float64) bool {
 	return value != value // NaN check
 }
@@ -426,24 +473,46 @@ func isInvalidFloat(value float64) bool {
 // i Wanna fetch  the latest image save in the database and I wanna to display it in the frontend ///
 func handleUserPoleImage(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// Query to select the latest pole image from the database
-		query := `SELECT poleimage FROM userform ORDER BY created_at DESC LIMIT 1`
+		// Query to select the latest pole image URL and multiple images URLs from the database
+		query := `SELECT poleimage, multipleimages FROM userform ORDER BY created_at DESC LIMIT 1`
 
 		row := db.QueryRow(query)
-		var imageData []byte
-		err := row.Scan(&imageData)
+		var poleImage string
+		var multipleImagesJSON sql.NullString // Use sql.NullString to handle NULL values
+
+		err := row.Scan(&poleImage, &multipleImagesJSON)
 		if err != nil {
+			if err == sql.ErrNoRows {
+				// Handle case where no rows are returned
+				log.Printf("No rows found: %v", err)
+				http.Error(w, "No images found", http.StatusNotFound)
+				return
+			}
 			log.Printf("Error querying the database: %v", err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		// Convert image data to base64 encoding
-		base64Image := base64.StdEncoding.EncodeToString(imageData)
+		// Prepare response data
+		response := map[string]interface{}{
+			"poleImage": poleImage,
+		}
 
-		// Send the base64 encoded image to the frontend
+		if multipleImagesJSON.Valid && multipleImagesJSON.String != "" {
+			var multipleImages []string
+			if err := json.Unmarshal([]byte(multipleImagesJSON.String), &multipleImages); err != nil {
+				log.Printf("Error unmarshalling JSON: %v", err)
+				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+				return
+			}
+			response["multipleImages"] = multipleImages
+		} else {
+			response["multipleImages"] = []string{}
+		}
+
+		// Send the image URLs to the frontend
 		w.Header().Set("Content-Type", "application/json")
-		if err := json.NewEncoder(w).Encode(base64Image); err != nil {
+		if err := json.NewEncoder(w).Encode(response); err != nil {
 			log.Printf("Error encoding response: %v", err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
@@ -574,6 +643,7 @@ func main() {
 	http.HandleFunc("/ws", handleWebSocketConnections)
 	http.HandleFunc("/start-trip", handleStartTrip(db))
 	http.HandleFunc("/end-trip", handleEndTrip(db))
+	http.HandleFunc("/get-form-data", handleGetFormData(db))
 
 	// CORS middleware
 	corsMiddleware := func(next http.Handler) http.Handler {

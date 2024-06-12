@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Button from "@mui/material/Button";
 import TextField from "@mui/material/TextField";
 import Select from "@mui/material/Select";
@@ -10,7 +10,6 @@ import RadioGroup from "@mui/material/RadioGroup";
 import TextareaAutosize from "@mui/material/TextareaAutosize";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import axios from "axios";
-import Home from "../Routes/Homepage";
 
 const Form = () => {
   const [products, setProducts] = useState({
@@ -31,51 +30,62 @@ const Form = () => {
     multipleimages: [],
   });
 
-  const [allInfo, setAllInfo] = useState([]);
-  const [editContent, setEditContent] = useState({});
+  const [isSubmitDisabled, setIsSubmitDisabled] = useState(true);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [additionalInfo, setAdditionalInfo] = useState([]);
   const [successMessage, setSuccessMessage] = useState("");
   const [showUserData, setShowUserData] = useState(false);
 
-  // const handleChange = (e) => {
-  //   const { name, value } = e.target;
-  //   //Custom Validation for GPS location
-  //   setUserInfo((prevUserInfo) => ({
-  //     ...prevUserInfo,
-  //     [name]: value,
-  //   }));
-  // };
+  useEffect(() => {
+    if (userInfo.availableisp === "No") {
+      setIsSubmitDisabled(false);
+    } else if (
+      userInfo.availableisp === "Yes" &&
+      userInfo.multipleimages.length >= 2
+    ) {
+      setIsSubmitDisabled(false);
+    } else {
+      setIsSubmitDisabled(true);
+    }
+  }, [userInfo.availableisp, userInfo.multipleimages]);
 
   const handleChange = (event) => {
+    const { name, files, value } = event.target;
+    if (files) {
+      if (files.length === 1) {
+        setUserInfo((prevState) => ({
+          ...prevState,
+          [name]: files[0],
+        }));
+      }
+    } else {
+      setUserInfo((prevState) => ({
+        ...prevState,
+        [name]: value,
+      }));
+    }
+  };
+
+  const handleMultipleImages = (event) => {
     const { name, files } = event.target;
     if (files) {
-        if (files.length === 1) {
-            // For single file input
-            setUserInfo((prevState) => ({
-                ...prevState,
-                [name]: files[0],
-            }));
-        } else {
-            // For multiple file input
-            setUserInfo((prevState) => ({
-                ...prevState,
-                [name]: files,
-            }));
-        }
-    } else {
-        const { name, value } = event.target;
+      if (files.length < 2) {
+        setErrorMessage("Upload at least 2 images");
+      } else {
+        setErrorMessage("");
         setUserInfo((prevState) => ({
-            ...prevState,
-            [name]: value,
+          ...prevState,
+          [name]: files,
         }));
+      }
     }
-};
-
+  };
 
   const handleGetGPSLocation = () => {
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const { latitude, longitude } = position.coords;
-        console.log("Geolocation success:", latitude, longitude); // Debugging statement
+        console.log("Geolocation success:", latitude, longitude);
         setUserInfo((prevUserInfo) => ({
           ...prevUserInfo,
           latitude: latitude.toString(),
@@ -103,73 +113,68 @@ const Form = () => {
     console.log("Update slider images", products);
   };
 
-
-
-
   const handleSubmit = async (event) => {
     event.preventDefault();
     try {
-        const formData = new FormData();
+      const formData = new FormData();
 
-        // Append fields to formData
-        formData.append("location", userInfo.location);
-        formData.append("latitude", parseFloat(userInfo.latitude));
-        formData.append("longitude", parseFloat(userInfo.longitude));
-        formData.append("selectpole", userInfo.selectpole);
-        formData.append("selectpolestatus", userInfo.selectpolestatus);
-        formData.append("selectpolelocation", userInfo.selectpolelocation);
-        formData.append("description", userInfo.description);
+      formData.append("location", userInfo.location);
+      formData.append("latitude", parseFloat(userInfo.latitude));
+      formData.append("longitude", parseFloat(userInfo.longitude));
+      formData.append("selectpole", userInfo.selectpole);
+      formData.append("selectpolestatus", userInfo.selectpolestatus);
+      formData.append("selectpolelocation", userInfo.selectpolelocation);
+      formData.append("description", userInfo.description);
 
-        if (userInfo.poleimage) {
-            formData.append("image", userInfo.poleimage); 
+      if (userInfo.poleimage) {
+        formData.append("image", userInfo.poleimage);
+      }
+
+      formData.append("availableisp", userInfo.availableisp);
+      formData.append("selectisp", userInfo.selectisp);
+
+      for (let i = 0; i < userInfo.multipleimages.length; i++) {
+        formData.append("multipleimages", userInfo.multipleimages[i]);
+      }
+
+      for (let pair of formData.entries()) {
+        console.log(pair[0] + ": " + pair[1]);
+      }
+
+      const response = await axios.post(
+        "http://localhost:8080/submit-form",
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
         }
+      );
 
-        formData.append("availableisp", userInfo.availableisp);
-        formData.append("selectisp", userInfo.selectisp);
+      console.log("Data inserted successfully:", response.data);
+      setSuccessMessage("Data inserted successfully!");
+      setTimeout(() => {
+        setSuccessMessage("");
+      }, 2000);
 
-        for (let i = 0; i < userInfo.multipleimages.length; i++) {
-            formData.append("multipleimages", userInfo.multipleimages[i]);
-        }
-
-        // Log the formData content for debugging
-        for (let pair of formData.entries()) {
-            console.log(pair[0] + ": " + pair[1]);
-        }
-
-        const response = await axios.post(
-            "http://localhost:8080/submit-form",
-            formData,
-            {
-                headers: {
-                    "Content-Type": "multipart/form-data",
-                },
-            }
-        );
-
-        console.log("Data inserted successfully:", response.data);
-        setSuccessMessage("Data inserted successfully!");
-        setTimeout(() => {
-            setSuccessMessage("");
-        }, 2000);
-
-        setUserInfo({
-            location: "",
-            latitude: "",
-            longitude: "",
-            selectpole: "",
-            selectpolestatus: "",
-            selectpolelocation: "",
-            description: "",
-            poleimage: "",
-            availableisp: "",
-            selectisp: "",
-            multipleimages: [],
-        });
+      setUserInfo({
+        location: "",
+        latitude: "",
+        longitude: "",
+        selectpole: "",
+        selectpolestatus: "",
+        selectpolelocation: "",
+        description: "",
+        poleimage: "",
+        availableisp: "",
+        selectisp: "",
+        multipleimages: [],
+      });
     } catch (error) {
-        console.error("Error inserting data:", error);
+      console.error("Error inserting data:", error);
     }
-};
-  
+  };
+
   const handleAddMore = () => {
     const newAdditionalInfo = {
       selectisp: "",
@@ -177,8 +182,6 @@ const Form = () => {
     };
     setAdditionalInfo([...additionalInfo, newAdditionalInfo]);
   };
-
-  const [additionalInfo, setAdditionalInfo] = useState([]);
 
   const handleAdditionalInfoChange = (e, index, inputType) => {
     const { name, value, files } = e.target;
@@ -292,11 +295,11 @@ const Form = () => {
 
         <FormLabel>Pole Image</FormLabel>
         <input
-            type="file"
-            name="poleimage"
-            accept="image/*"
-            onChange={handleChange}
-            style={{ margin: "8px 0" }}
+          type="file"
+          name="poleimage"
+          accept="image/*"
+          onChange={handleChange}
+          style={{ margin: "8px 0" }}
         />
         <FormControl component="fieldset" style={{ margin: "8px 0" }}>
           <FormLabel component="legend">Available ISP</FormLabel>
@@ -328,15 +331,18 @@ const Form = () => {
                 <MenuItem value="Subisu">Subisu</MenuItem>
               </Select>
             </FormControl>
+            <FormLabel component="legend"> Upload Multiple Images</FormLabel>
             <input
               multiple
               type="file"
               name="multipleimages"
               accept="multipleimages/*"
-              // onChange={handleSliderImages}
-              onChange={handleChange}
+              onChange={handleMultipleImages}
               style={{ margin: "8px 0" }}
             />
+            {errorMessage && (
+              <p style={{ color: "red", marginTop: "8px" }}>{errorMessage}</p>
+            )}
 
             {additionalInfo.map((info, index) => (
               <div key={index}>
@@ -357,7 +363,10 @@ const Form = () => {
                     <MenuItem value="Subisu">Subisu</MenuItem>
                   </Select>
                 </FormControl>
-
+                <FormLabel component="legend">
+                  {" "}
+                  Upload Multiple Images
+                </FormLabel>
                 <input
                   multiple
                   type="file"
@@ -387,6 +396,7 @@ const Form = () => {
           fullWidth
           style={{ margin: "20px 0" }}
           type="submit"
+          disabled={isSubmitDisabled}
         >
           Submit
         </Button>
@@ -400,4 +410,5 @@ const Form = () => {
     </div>
   );
 };
+
 export default Form;
