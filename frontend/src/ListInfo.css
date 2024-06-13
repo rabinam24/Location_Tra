@@ -1,37 +1,44 @@
+.table-container {
+  padding: 10px;
+}
 
-  .table-responsive {
-    overflow-x: auto;
-  }
-  
-  th, td {
-    padding: 10px;
-    border-bottom: 1px solid #ddd;
-  }
-  
-  th {
-    background-color: #f0f0f0;
-  }
-  
-  .edit-button,.delete-button {
-    margin: 10px;
-    padding: 10px 20px;
-    border: none;
-    border-radius: 5px;
-    background-color: #4CAF50;
-    color: #fff;
-    cursor: pointer;
-  }
-  
-  .edit-button:hover,.delete-button:hover {
-    background-color: #3e8e41;
-  }
-.pagination{
-  width: fit-content;
-    margin: 5px;
-    padding: 5px 5px;
-    border: none;
-    border-radius: 5px;
-    background-color: #4CAF50;
-    color: #fff;
-    cursor: pointer;
+.custom-table-container {
+  overflow-x: auto;
+}
+
+.custom-table-container table {
+  min-width: 650px;
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  margin-top: 10px;
+}
+
+.pagination button {
+  margin: 0 5px;
+  padding: 5px 10px;
+  border: none;
+  background-color: #3f51b5;
+  color: white;
+  cursor: pointer;
+  border-radius: 5px;
+}
+
+.pagination button.active {
+  background-color: #303f9f;
+}
+
+.delete-button {
+  background-color: #f44336;
+  color: white;
+  border: none;
+  padding: 5px 10px;
+  cursor: pointer;
+  border-radius: 5px;
+}
+
+.delete-button:hover {
+  background-color: #d32f2f;
 }

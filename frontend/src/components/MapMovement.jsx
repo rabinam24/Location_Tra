@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import "../styles.css";
 import "leaflet/dist/leaflet.css";
-import { MapContainer, TileLayer, Marker, Polyline, FlyTo } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Polyline, useMap, Popup } from "react-leaflet";
 
 const MapWithWebSocket = () => {
   const [gpsData, setGPSData] = useState([]);
@@ -15,8 +15,8 @@ const MapWithWebSocket = () => {
       const fakeData = [
         { latitude: 27.6714893, longitude: 85.3120526 }, // Initial position
         { latitude: 27.6715, longitude: 85.3121 },        // Fake position update
-        { latitude: 27.6716, longitude: 85.3222 },        // Fake position update
-        { latitude: 27.6717, longitude: 85.3223 },        // Fake position update
+        // { latitude: 27.6716, longitude: 85.3222 },        // Fake position update
+        // { latitude: 27.6717, longitude: 85.3223 },        // Fake position update
         // Add more fake data as needed
       ];
       setGPSData(fakeData);
@@ -35,22 +35,30 @@ const MapWithWebSocket = () => {
     }
   }, [gpsData]);
 
+  const FlyToComponent = () => {
+    const map = useMap();
+    useEffect(() => {
+      map.flyTo(mapCenter, zoomLevel);
+    }, [mapCenter, zoomLevel, map]);
+
+    return null;
+  };
+
   return (
     <div>
       <p>Fake GPS Data</p>
       <MapContainer center={mapCenter} zoom={zoomLevel} style={{ height: "400px", margin: "10px 0" }}>
-        <FlyTo
-          position={mapCenter} // Fly to the latest GPS position
-          zoom={zoomLevel} // Zoom level
-        />
+        <FlyToComponent />
         <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
         {gpsData.map((location, index) => (
-          <Marker key={index} position={[location.latitude, location.longitude]} />
+          <Marker key={index} position={[location.latitude, location.longitude]}>
+            <Popup>Latitude: {location.latitude}, Longitude: {location.longitude}</Popup>
+          </Marker>
         ))}
-        <Polyline positions={userPath} />
+       
       </MapContainer>
     </div>
   );
-};  
+};
 
 export default MapWithWebSocket;

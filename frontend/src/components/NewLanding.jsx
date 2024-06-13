@@ -9,7 +9,7 @@ import DialogTitle from "@mui/material/DialogTitle";
 import Form from "./FormInput";
 import HorizontalBars from "./Dashboard";
 import Home from "../Routes/Homepage";
-import MapWithMarkers from "./MapComponent";
+// import MapWithMarkers from "./MapComponent";
 import ImageGallery from "./PoleImage";
 import axios from "axios"; // Import Axios
 import MapWithWebSocket from "./MapComponent";
@@ -26,6 +26,7 @@ function NewLanding() {
   const [showUserData, setShowUserData] = useState(false);
   const intervalIdRef = useRef(null);
   const [openModal, setOpenModal] = useState(false);
+  const [showUserMap, setShowUserMap] = useState(false);
 
   // Scroll to top when component mounts
   useEffect(() => {
@@ -81,6 +82,7 @@ function NewLanding() {
     }
   };
 
+
   const handleStopClick = async () => {
     const userId = 1; // Replace with actual user ID
 
@@ -127,6 +129,10 @@ function NewLanding() {
     setShowUserData(!showUserData);
   };
 
+  const handleUserMapClick = () => {
+    setShowUserMap(!showUserMap);
+  };
+
   const formatElapsedTime = (elapsedTime) => {
     const seconds = Math.floor(elapsedTime / 1000) % 60;
     const minutes = Math.floor(elapsedTime / (1000 * 60)) % 60;
@@ -163,10 +169,21 @@ function NewLanding() {
                     color="primary"
                     onClick={handleUserDataClick}
                   >
-                    User Data
+                    Travel Log
+                  </Button>
+                </Grid>
+
+                <Grid item>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    onClick={handleUserMapClick}
+                  >
+                    Show Map
                   </Button>
                 </Grid>
               </Grid>
+
 
               <Dialog
                 open={openModal}
@@ -191,6 +208,7 @@ function NewLanding() {
                   </Button>
                 </DialogActions>
               </Dialog>
+
             </>
           )}
 
@@ -201,6 +219,7 @@ function NewLanding() {
           )}
 
           {showUserData && <Home />}
+          {showUserMap && <MapWithWebSocket />}
 
           {trip.started && (
             <>
@@ -247,8 +266,6 @@ function NewLanding() {
 
               {showAddTravelLogButton && <Form />}
 
-              
-              <MapWithWebSocket />
             
               <ImageGallery />
             </>

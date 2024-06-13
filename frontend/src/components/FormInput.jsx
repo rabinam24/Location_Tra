@@ -1,14 +1,19 @@
 import React, { useState, useEffect } from "react";
-import Button from "@mui/material/Button";
-import TextField from "@mui/material/TextField";
-import Select from "@mui/material/Select";
-import MenuItem from "@mui/material/MenuItem";
-import FormControl from "@mui/material/FormControl";
-import FormLabel from "@mui/material/FormLabel";
-import Radio from "@mui/material/Radio";
-import RadioGroup from "@mui/material/RadioGroup";
-import TextareaAutosize from "@mui/material/TextareaAutosize";
-import FormControlLabel from "@mui/material/FormControlLabel";
+import {
+  Button,
+  TextField,
+  Select,
+  MenuItem,
+  FormControl,
+  FormLabel,
+  Radio,
+  RadioGroup,
+  TextareaAutosize,
+  FormControlLabel,
+  Typography,
+  Box,
+  Container,
+} from "@mui/material";
 import axios from "axios";
 
 const Form = () => {
@@ -35,6 +40,22 @@ const Form = () => {
   const [additionalInfo, setAdditionalInfo] = useState([]);
   const [successMessage, setSuccessMessage] = useState("");
   const [showUserData, setShowUserData] = useState(false);
+
+  useEffect(() => {
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        setUserInfo((prevUserInfo) => ({
+          ...prevUserInfo,
+          latitude: latitude.toString(),
+          longitude: longitude.toString(),
+        }));
+      },
+      (error) => {
+        console.error("Error getting geolocation:", error);
+      }
+    );
+  }, []);
 
   useEffect(() => {
     if (userInfo.availableisp === "No") {
@@ -81,38 +102,6 @@ const Form = () => {
     }
   };
 
-  const handleGetGPSLocation = () => {
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const { latitude, longitude } = position.coords;
-        console.log("Geolocation success:", latitude, longitude);
-        setUserInfo((prevUserInfo) => ({
-          ...prevUserInfo,
-          latitude: latitude.toString(),
-          longitude: longitude.toString(),
-        }));
-      },
-      (error) => {
-        console.error("Error getting geolocation:", error);
-      }
-    );
-  };
-
-  const handleFileChange = (e) => {
-    const { name, files } = e.target;
-    setUserInfo((prevUserInfo) => ({
-      ...prevUserInfo,
-      [name]: files,
-    }));
-  };
-
-  const handleSliderImages = (e) => {
-    if (e.target.files) {
-      setProducts({ ...products, slider_images: [...e.target.files] });
-    }
-    console.log("Update slider images", products);
-  };
-
   const handleSubmit = async (event) => {
     event.preventDefault();
     try {
@@ -127,7 +116,7 @@ const Form = () => {
       formData.append("description", userInfo.description);
 
       if (userInfo.poleimage) {
-        formData.append("image", userInfo.poleimage);
+        formData.append("poleimage", userInfo.poleimage);
       }
 
       formData.append("availableisp", userInfo.availableisp);
@@ -137,9 +126,11 @@ const Form = () => {
         formData.append("multipleimages", userInfo.multipleimages[i]);
       }
 
-      for (let pair of formData.entries()) {
-        console.log(pair[0] + ": " + pair[1]);
-      }
+      const formattedAdditionalInfo = additionalInfo.map((info) => ({
+        selectisp: info.selectisp,
+        multipleimages: Array.from(info.multipleimages),
+      }));
+      formData.append("additionalInfo", JSON.stringify(formattedAdditionalInfo));
 
       const response = await axios.post(
         "http://localhost:8080/submit-form",
@@ -170,6 +161,7 @@ const Form = () => {
         selectisp: "",
         multipleimages: [],
       });
+      setAdditionalInfo([]);
     } catch (error) {
       console.error("Error inserting data:", error);
     }
@@ -201,213 +193,245 @@ const Form = () => {
   };
 
   return (
-    <div className="input-form text-black">
-      <form
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          maxWidth: "350px",
-          margin: "auto",
-        }}
-        onSubmit={handleSubmit}
-      >
-        <h1 className="text-center flex text-3xl text-blue-800">Travel Log</h1>
-
-        <TextField
-          name="location"
-          label="Location"
-          value={userInfo.location}
-          onChange={handleChange}
-          variant="outlined"
-          margin="normal"
-          required
-        />
-
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={handleGetGPSLocation}
-          style={{ margin: "8px 0" }}
+    <Container maxWidth="sm">
+      <Box className="input-form text-black" mt={5}>
+        <form
+          style={{
+            display: "flex",
+            flexDirection: "column",
+          }}
+          onSubmit={handleSubmit}
         >
-          Get GPS Location
-        </Button>
+          <Typography variant="h4" color="primary" align="center" gutterBottom>
+            Travel Log
+          </Typography>
 
-        <FormControl style={{ margin: "8px 0" }}>
-          <FormLabel>Select pole</FormLabel>
-          <Select
-            name="selectpole"
-            value={userInfo.selectpole}
+          <TextField
+            name="location"
+            label="Location"
+            value={userInfo.location}
+            onChange={handleChange}
+            variant="outlined"
+            margin="normal"
             required
-            onChange={handleChange}
-          >
-            <MenuItem value="">Select pole</MenuItem>
-            <MenuItem value="Concrite Square pole">
-              Concrite Square pole
-            </MenuItem>
-            <MenuItem value="Concrite Round pole">Concrite Round pole</MenuItem>
-            <MenuItem value="Metal pole">Metal pole</MenuItem>
-            <MenuItem value="Wooden pole">Wooden pole</MenuItem>
-            <MenuItem value="Bamboo pole">Bamboo pole</MenuItem>
-          </Select>
-        </FormControl>
+            fullWidth
+          />
 
-        <FormControl style={{ margin: "8px 0" }}>
-          <FormLabel>Select pole Status</FormLabel>
-          <Select
-            name="selectpolestatus"
-            value={userInfo.selectpolestatus}
+          <TextField
+            name="latitude"
+            label="Latitude"
+            value={userInfo.latitude}
+            onChange={handleChange}
+            variant="outlined"
+            margin="normal"
             required
-            onChange={handleChange}
-          >
-            <MenuItem value="">Select pole Status</MenuItem>
-            <MenuItem value="In Great Condition">In Great Condition</MenuItem>
-            <MenuItem value="In Moderate Condition">
-              In Moderate Condition
-            </MenuItem>
-            <MenuItem value="In Bad Condition">In Bad Condition</MenuItem>
-          </Select>
-        </FormControl>
+            fullWidth
+            disabled
+          />
 
-        <FormControl style={{ margin: "8px 0" }}>
-          <FormLabel>Select pole Location</FormLabel>
-          <Select
-            name="selectpolelocation"
-            value={userInfo.selectpolelocation}
+          <TextField
+            name="longitude"
+            label="Longitude"
+            value={userInfo.longitude}
+            onChange={handleChange}
+            variant="outlined"
+            margin="normal"
             required
-            onChange={handleChange}
-          >
-            <MenuItem value="">Select pole Location</MenuItem>
-            <MenuItem value="Near House">Near House</MenuItem>
-            <MenuItem value="Inside House">Inside House</MenuItem>
-            <MenuItem value="No House NearBy">No House NearBy</MenuItem>
-            <MenuItem value="In Open Space">In Open Space</MenuItem>
-          </Select>
-        </FormControl>
+            fullWidth
+            disabled
+          />
 
-        <FormLabel>Description</FormLabel>
-        <TextareaAutosize
-          name="description"
-          placeholder="Description"
-          value={userInfo.description}
-          onChange={handleChange}
-          style={{ margin: "8px 0", minHeight: "100px" }}
-        />
-
-        <FormLabel>Pole Image</FormLabel>
-        <input
-          type="file"
-          name="poleimage"
-          accept="image/*"
-          onChange={handleChange}
-          style={{ margin: "8px 0" }}
-        />
-        <FormControl component="fieldset" style={{ margin: "8px 0" }}>
-          <FormLabel component="legend">Available ISP</FormLabel>
-          <RadioGroup
-            name="availableisp"
-            value={userInfo.availableisp}
-            onChange={handleChange}
-          >
-            <FormControlLabel value="Yes" control={<Radio />} label="Yes" />
-            <FormControlLabel value="No" control={<Radio />} label="No" />
-          </RadioGroup>
-        </FormControl>
-
-        {userInfo.availableisp === "Yes" && (
-          <>
-            <FormControl style={{ margin: "8px 0" }}>
-              <FormLabel>Select ISP</FormLabel>
-              <Select
-                name="selectisp"
-                value={userInfo.selectisp}
-                required
-                onChange={handleChange}
-              >
-                <MenuItem value="">Select ISP</MenuItem>
-                <MenuItem value="World Link">WorldLink</MenuItem>
-                <MenuItem value="Nepal Telecom">Nepal Telecom</MenuItem>
-                <MenuItem value="Vianet">Vianet</MenuItem>
-                <MenuItem value="ClaasicTech">ClassicTech</MenuItem>
-                <MenuItem value="Subisu">Subisu</MenuItem>
-              </Select>
-            </FormControl>
-            <FormLabel component="legend"> Upload Multiple Images</FormLabel>
-            <input
-              multiple
-              type="file"
-              name="multipleimages"
-              accept="multipleimages/*"
-              onChange={handleMultipleImages}
-              style={{ margin: "8px 0" }}
-            />
-            {errorMessage && (
-              <p style={{ color: "red", marginTop: "8px" }}>{errorMessage}</p>
-            )}
-
-            {additionalInfo.map((info, index) => (
-              <div key={index}>
-                <FormControl style={{ margin: "8px 0", width: "100%" }}>
-                  <FormLabel>Select ISP</FormLabel>
-                  <Select
-                    name={`selectisp-${index}`}
-                    value={info.selectisp}
-                    onChange={(e) =>
-                      handleAdditionalInfoChange(e, index, "selectisp")
-                    }
-                  >
-                    <MenuItem value="">Select ISP</MenuItem>
-                    <MenuItem value="World Link">WorldLink</MenuItem>
-                    <MenuItem value="Nepal Telecom">Nepal Telecom</MenuItem>
-                    <MenuItem value="Vianet">Vianet</MenuItem>
-                    <MenuItem value="ClaasicTech">ClassicTech</MenuItem>
-                    <MenuItem value="Subisu">Subisu</MenuItem>
-                  </Select>
-                </FormControl>
-                <FormLabel component="legend">
-                  {" "}
-                  Upload Multiple Images
-                </FormLabel>
-                <input
-                  multiple
-                  type="file"
-                  name={`multipleimages-${index}`}
-                  onChange={(e) =>
-                    handleAdditionalInfoChange(e, index, "multipleimages")
-                  }
-                  style={{ margin: "8px 0" }}
-                />
-              </div>
-            ))}
-
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={handleAddMore}
-              style={{ margin: "8px 0" }}
+          <FormControl variant="outlined" margin="normal" fullWidth>
+            <FormLabel>Select Pole</FormLabel>
+            <Select
+              name="selectpole"
+              value={userInfo.selectpole}
+              required
+              onChange={handleChange}
             >
-              Add More
-            </Button>
-          </>
-        )}
+              <MenuItem value="">Select Pole</MenuItem>
+              <MenuItem value="Concrete Square Pole">
+                Concrete Square Pole
+              </MenuItem>
+              <MenuItem value="Concrete Round Pole">
+                Concrete Round Pole
+              </MenuItem>
+              <MenuItem value="Metal Pole">Metal Pole</MenuItem>
+              <MenuItem value="Wooden Pole">Wooden Pole</MenuItem>
+              <MenuItem value="Bamboo Pole">Bamboo Pole</MenuItem>
+            </Select>
+          </FormControl>
 
-        <Button
-          variant="contained"
-          color="success"
-          fullWidth
-          style={{ margin: "20px 0" }}
-          type="submit"
-          disabled={isSubmitDisabled}
-        >
-          Submit
-        </Button>
+          <FormControl variant="outlined" margin="normal" fullWidth>
+            <FormLabel>Select Pole Status</FormLabel>
+            <Select
+              name="selectpolestatus"
+              value={userInfo.selectpolestatus}
+              required
+              onChange={handleChange}
+            >
+              <MenuItem value="">Select Pole Status</MenuItem>
+              <MenuItem value="In Great Condition">
+                In Great Condition
+              </MenuItem>
+              <MenuItem value="In Moderate Condition">
+                In Moderate Condition
+              </MenuItem>
+              <MenuItem value="In Bad Condition">In Bad Condition</MenuItem>
+            </Select>
+          </FormControl>
 
-        {successMessage && (
-          <div style={{ color: "green", textAlign: "center" }}>
-            {successMessage}
-          </div>
-        )}
-      </form>
-    </div>
+          <FormControl variant="outlined" margin="normal" fullWidth>
+            <FormLabel>Select Pole Location</FormLabel>
+            <Select
+              name="selectpolelocation"
+              value={userInfo.selectpolelocation}
+              required
+              onChange={handleChange}
+            >
+              <MenuItem value="">Select Pole Location</MenuItem>
+              <MenuItem value="Near House">Near House</MenuItem>
+              <MenuItem value="Inside House">Inside House</MenuItem>
+              <MenuItem value="No House Nearby">No House Nearby</MenuItem>
+              <MenuItem value="In Open Space">In Open Space</MenuItem>
+            </Select>
+          </FormControl>
+
+          <FormLabel>Description</FormLabel>
+          <TextareaAutosize
+            name="description"
+            placeholder="Description"
+            value={userInfo.description}
+            onChange={handleChange}
+            style={{
+              margin: "8px 0",
+              minHeight: "100px",
+              padding: "10px",
+              borderRadius: "4px",
+              borderColor: "rgba(0, 0, 0, 0.23)",
+            }}
+          />
+
+          <FormLabel>Pole Image</FormLabel>
+          <input
+            type="file"
+            name="poleimage"
+            accept="image/*"
+            onChange={handleChange}
+            style={{ margin: "8px 0" }}
+          />
+
+          <FormControl component="fieldset" style={{ margin: "8px 0" }}>
+            <FormLabel component="legend">Available ISP</FormLabel>
+            <RadioGroup
+              name="availableisp"
+              value={userInfo.availableisp}
+              onChange={handleChange}
+              row
+            >
+              <FormControlLabel value="Yes" control={<Radio />} label="Yes" />
+              <FormControlLabel value="No" control={<Radio />} label="No" />
+            </RadioGroup>
+          </FormControl>
+
+          {userInfo.availableisp === "Yes" && (
+            <>
+              <FormControl variant="outlined" margin="normal" fullWidth>
+                <FormLabel>Select ISP</FormLabel>
+                <Select
+                  name="selectisp"
+                  value={userInfo.selectisp}
+                  required
+                  onChange={handleChange}
+                >
+                  <MenuItem value="">Select ISP</MenuItem>
+                  <MenuItem value="World Link">WorldLink</MenuItem>
+                  <MenuItem value="Nepal Telecom">Nepal Telecom</MenuItem>
+                  <MenuItem value="Vianet">Vianet</MenuItem>
+                  <MenuItem value="ClassicTech">ClassicTech</MenuItem>
+                  <MenuItem value="Subisu">Subisu</MenuItem>
+                </Select>
+              </FormControl>
+
+              <FormLabel component="legend">Upload Multiple Images</FormLabel>
+              <input
+                multiple
+                type="file"
+                name="multipleimages"
+                accept="image/*"
+                onChange={handleMultipleImages}
+                style={{ margin: "8px 0" }}
+              />
+              {errorMessage && (
+                <Typography color="error" style={{ marginTop: "8px" }}>
+                  {errorMessage}
+                </Typography>
+              )}
+
+              {additionalInfo.map((info, index) => (
+                <Box key={index} mb={2}>
+                  <FormControl variant="outlined" margin="normal" fullWidth>
+                    <FormLabel>Select ISP</FormLabel>
+                    <Select
+                      name={`selectisp-${index}`}
+                      value={info.selectisp}
+                      onChange={(e) =>
+                        handleAdditionalInfoChange(e, index, "selectisp")
+                      }
+                    >
+                      <MenuItem value="">Select ISP</MenuItem>
+                      <MenuItem value="World Link">WorldLink</MenuItem>
+                      <MenuItem value="Nepal Telecom">Nepal Telecom</MenuItem>
+                      <MenuItem value="Vianet">Vianet</MenuItem>
+                      <MenuItem value="ClassicTech">ClassicTech</MenuItem>
+                      <MenuItem value="Subisu">Subisu</MenuItem>
+                    </Select>
+                  </FormControl>
+
+                  <FormLabel component="legend">Upload Multiple Images</FormLabel>
+                  <input
+                    multiple
+                    type="file"
+                    name={`multipleimages-${index}`}
+                    onChange={(e) =>
+                      handleAdditionalInfoChange(e, index, "multipleimages")
+                    }
+                    style={{ margin: "8px 0" }}
+                  />
+                </Box>
+              ))}
+
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={handleAddMore}
+                style={{ margin: "8px 0" }}
+                fullWidth
+              >
+                Add More
+              </Button>
+            </>
+          )}
+
+          <Button
+            variant="contained"
+            color="success"
+            fullWidth
+            style={{ margin: "20px 0" }}
+            type="submit"
+            disabled={isSubmitDisabled}
+          >
+            Submit
+          </Button>
+
+          {successMessage && (
+            <Typography color="success" align="center">
+              {successMessage}
+            </Typography>
+          )}
+        </form>
+      </Box>
+    </Container>
   );
 };
 

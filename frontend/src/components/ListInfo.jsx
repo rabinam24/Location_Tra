@@ -8,11 +8,10 @@ import TableContainer from "@mui/material/TableContainer";
 import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import Paper from "@mui/material/Paper";
+import { Grid, Button, Typography, Box } from "@mui/material";
 
 const List = () => {
   const [allInfo, setAllInfo] = useState([]);
-  const [edit, setEdit] = useState(false);
-  const [editContent, setEditContent] = useState(null);
   const [sortDirection, setSortDirection] = useState("asc");
   const [tableData, setTableData] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
@@ -64,91 +63,113 @@ const List = () => {
   const indexOfFirstRow = indexOfLastRow - rowsPerPage;
   const currentRows = tableData.slice(indexOfFirstRow, indexOfLastRow);
 
+  const headers = [
+    "Location",
+    "Latitude",
+    "Longitude",
+    "Select Pole",
+    "Select Pole Status",
+    "Select Pole Location",
+    "Description",
+    "Pole Image",
+    "Available ISP",
+    "Select ISP",
+    "Multiple Images",
+    "Actions"
+  ];
+
+  const renderCellContent = (info, header) => {
+    switch (header) {
+      case "Location":
+        return info.location;
+      case "Latitude":
+        return info.latitude;
+      case "Longitude":
+        return info.longitude;
+      case "Select Pole":
+        return info.selectpole;
+      case "Select Pole Status":
+        return info.selectpolestatus;
+      case "Select Pole Location":
+        return info.selectpolelocation;
+      case "Description":
+        return info.description;
+      case "Pole Image":
+        return info.poleimage && (
+          <img src={info.poleimage} alt="Pole" style={{ width: "100px", height: "100px" }} />
+        );
+      case "Available ISP":
+        return info.availableisp;
+      case "Select ISP":
+        return info.selectisp;
+      case "Multiple Images":
+        return info.multipleimages && info.multipleimages.map((image, index) => (
+          <img key={index} src={image} alt={`Multiple ${index}`} style={{ width: "100px", height: "100px" }} />
+        ));
+      case "Actions":
+        return (
+          <Button 
+            variant="contained" 
+            color="secondary" 
+            onClick={() => handleDelete(info.id)}
+          >
+            Delete
+          </Button>
+        );
+      default:
+        return null;
+    }
+  };
+
   return (
-    <div className="table-container">
-      <TableContainer component={Paper} className="custom-table-container">
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell onClick={handleSort}>
-                Location {sortDirection === "asc" ? "↑" : "↓"}
-              </TableCell>
-              <TableCell>Latitude</TableCell>
-              <TableCell>Longitude</TableCell>
-              <TableCell>Select Pole</TableCell>
-              <TableCell>Select Pole Status</TableCell>
-              <TableCell>Select Pole Location</TableCell>
-              <TableCell>Description</TableCell>
-              <TableCell>Pole Image</TableCell>
-              <TableCell>Available ISP</TableCell>
-              <TableCell>Select ISP</TableCell>
-              <TableCell>Multiple Images</TableCell>
-              <TableCell>Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {currentRows.map((info) => (
-              <TableRow key={info.id}>
-                <TableCell>{info.location}</TableCell>
-                <TableCell>{info.latitude}</TableCell>
-                <TableCell>{info.longitude}</TableCell>
-                <TableCell>{info.selectpole}</TableCell>
-                <TableCell>{info.selectpolestatus}</TableCell>
-                <TableCell>{info.selectpolelocation}</TableCell>
-                <TableCell>{info.description}</TableCell>
-                <TableCell>
-                  {info.poleimage && (
-                    <img src={info.poleimage} alt="Pole" style={{ width: "100px", height: "100px" }} />
-                  )}
-                </TableCell>
-                <TableCell>{info.availableisp}</TableCell>
-                <TableCell>{info.selectisp}</TableCell>
-                <TableCell>
-                  {info.multipleimages && info.multipleimages.map((image, index) => (
-                    <img key={index} src={image} alt={`Multiple ${index}`} style={{ width: "100px", height: "100px" }} />
-                  ))}
-                </TableCell>
-                <TableCell>
-                  <button
-                    className="delete-button"
-                    onClick={() => handleDelete(info.id)}
-                  >
-                    Delete
-                  </button>
-                </TableCell>
+    <Grid container spacing={2} justifyContent="center">
+      <Grid item xs={12} md={10}>
+        <Box display="flex" justifyContent="space-between" mb={2}>
+          <Typography variant="h6">List of Entries</Typography>
+          <Button variant="contained" color="primary" onClick={handleSort}>
+            Sort by Location
+          </Button>
+        </Box>
+        <TableContainer component={Paper} className="custom-table-container">
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Property</TableCell>
+                {currentRows.map((_, index) => (
+                  <TableCell key={index}>Entry {index + 1}</TableCell>
+                ))}
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
-      {tableData.length > rowsPerPage && (
-        <div className="pagination">
-          {Array.from(
-            { length: Math.ceil(tableData.length / rowsPerPage) },
-            (_, index) => (
-              <button
-                key={index}
-                onClick={() => setCurrentPage(index + 1)}
-                className={currentPage === index + 1 ? "active" : ""}
-              >
-                {index + 1}
-              </button>
-            )
-          )}
-        </div>
-      )}
-      {edit && (
-        <div className="edit-form-container">
-          {/* <EditForm
-            editContent={editContent}
-            setEditContent={setEditContent}
-            setEdit={setEdit}
-            allInfo={allInfo}
-            setAllInfo={setAllInfo}
-          /> */}
-        </div>
-      )}
-    </div>
+            </TableHead>
+            <TableBody>
+              {headers.map((header) => (
+                <TableRow key={header}>
+                  <TableCell>{header}</TableCell>
+                  {currentRows.map((info, index) => (
+                    <TableCell key={index}>{renderCellContent(info, header)}</TableCell>
+                  ))}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+        {tableData.length > rowsPerPage && (
+          <Box display="flex" justifyContent="center" mt={2}>
+            {Array.from(
+              { length: Math.ceil(tableData.length / rowsPerPage) },
+              (_, index) => (
+                <Button
+                  key={index}
+                  onClick={() => setCurrentPage(index + 1)}
+                  className={currentPage === index + 1 ? "active" : ""}
+                >
+                  {index + 1}
+                </Button>
+              )
+            )}
+          </Box>
+        )}
+      </Grid>
+    </Grid>
   );
 };
 
