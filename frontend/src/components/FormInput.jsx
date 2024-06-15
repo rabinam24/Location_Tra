@@ -29,7 +29,7 @@ const Form = () => {
     selectpolestatus: "",
     selectpolelocation: "",
     description: "",
-    poleimage: "",
+    poleimage: null,
     availableisp: "",
     selectisp: "",
     multipleimages: [],
