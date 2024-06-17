@@ -138,6 +138,10 @@ class Student(db.Model):
     roll = db.Column(db.Integer,primary_key=True)
     name = db.Column(db.String(80))
 
+# class Dummy(db.Model):
+#     id = db.Column(db.Integer,primary_key=True)
+#     dumb = db.Column(db.String(80))
+
 def randomize():
     # Generate SQL code for creating tables
     sql_code = db.Model.metadata.create_all(bind=db.engine)
