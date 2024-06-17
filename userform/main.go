@@ -260,7 +260,7 @@ func handleFormData(db *sql.DB, minioClient *minio.Client, bucketName string, en
 		formData.SelectISP = r.FormValue("selectisp")
 
 		// Retrieve and upload single image
-		file, _, err := r.FormFile("image")
+		file, _, err := r.FormFile("poleimage")
 		if err != nil {
 			log.Printf("Error retrieving single image: %v", err)
 		} else {

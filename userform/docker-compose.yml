@@ -17,14 +17,13 @@ services:
     volumes:
       - ./docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
 
-
   minio-server:
     image: minio/minio
     ports:
-      - "9000:9001"
+      - "9000:9000"
     environment:
-      MINIO_ROOT_USER: "JJiBrYDyIGUpRlXpTl00"
-      MINIO_ROOT_PASSWORD: "lqD6aBXF5C793HQgOtZuQKlUwB5R5Z95FcLQFmU4"
+      MINIO_ROOT_USER: "minioadmin"
+      MINIO_ROOT_PASSWORD: "minioadmin"
     command: server /data
     volumes:
       - ./minio-data:/data
@@ -38,8 +37,8 @@ services:
       DB_PASSWORD: Bhandari
       DB_NAME: binam
       MINIO_ENDPOINT: "minio-server:9000"
-      MINIO_ACCESS_KEY: "GTug13wZkyKMp8jygOmI"
-      MINIO_SECRET_KEY: "3I7Wtl43tuNCMw8UVLrMlzl2Y1ikIIdbnUkQYhcH"
+      MINIO_ACCESS_KEY: "9bAjrTWAamQb9zam3trE"
+      MINIO_SECRET_KEY: "n85o1uMtF1sZ0hlvQIylSPXQOUKPNX5NVLyuSu2i"
       MINIO_SSL: "false"
     ports:
       - "8080:8080"
