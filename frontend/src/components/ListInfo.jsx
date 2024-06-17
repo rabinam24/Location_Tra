@@ -1,14 +1,20 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import "../ListInfo.css";
-import Table from "@mui/material/Table";
-import TableBody from "@mui/material/TableBody";
-import TableCell from "@mui/material/TableCell";
-import TableContainer from "@mui/material/TableContainer";
-import TableHead from "@mui/material/TableHead";
-import TableRow from "@mui/material/TableRow";
-import Paper from "@mui/material/Paper";
-import { Grid, Button, Typography, Box } from "@mui/material";
+import { 
+  Table, 
+  Image, 
+  Button, 
+  Grid, 
+  Text, 
+  Box, 
+  Paper, 
+  ScrollArea, 
+  useMantineTheme, 
+  Container, 
+  SimpleGrid, 
+  Group 
+} from "@mantine/core";
+import { useMediaQuery } from "@mantine/hooks";
 
 const List = () => {
   const [allInfo, setAllInfo] = useState([]);
@@ -16,6 +22,9 @@ const List = () => {
   const [tableData, setTableData] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const rowsPerPage = 5;
+
+  const theme = useMantineTheme();
+  const isMobile = useMediaQuery(`(max-width: ${theme.breakpoints.sm}px)`);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -53,9 +62,7 @@ const List = () => {
       setAllInfo(updatedData);
     } catch (error) {
       console.error("Error deleting data:", error);
-      alert(
-        `Error deleting data: ${error.response?.data?.message || error.message}`
-      );
+      alert(`Error deleting data: ${error.response?.data?.message || error.message}`);
     }
   };
 
@@ -96,7 +103,7 @@ const List = () => {
         return info.description;
       case "Pole Image":
         return info.poleimage && (
-          <img src={info.poleimage} alt="Pole" style={{ width: "100px", height: "100px" }} />
+          <Image src={info.poleimage} alt="Pole" width={100} height={100} />
         );
       case "Available ISP":
         return info.availableisp;
@@ -104,13 +111,13 @@ const List = () => {
         return info.selectisp;
       case "Multiple Images":
         return info.multipleimages && info.multipleimages.map((image, index) => (
-          <img key={index} src={image} alt={`Multiple ${index}`} style={{ width: "100px", height: "100px" }} />
+          <Image key={index} src={image} alt={`Multiple ${index}`} width={100} height={100} />
         ));
       case "Actions":
         return (
           <Button 
-            variant="contained" 
-            color="secondary" 
+            variant="filled" 
+            color="red" 
             onClick={() => handleDelete(info.id)}
           >
             Delete
@@ -122,54 +129,81 @@ const List = () => {
   };
 
   return (
-    <Grid container spacing={2} justifyContent="center">
-      <Grid item xs={12} md={10}>
-        <Box display="flex" justifyContent="space-between" mb={2}>
-          <Typography variant="h6">List of Entries</Typography>
-          <Button variant="contained" color="primary" onClick={handleSort}>
-            Sort by Location
-          </Button>
-        </Box>
-        <TableContainer component={Paper} className="custom-table-container">
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Property</TableCell>
-                {currentRows.map((_, index) => (
-                  <TableCell key={index}>Entry {index + 1}</TableCell>
-                ))}
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {headers.map((header) => (
-                <TableRow key={header}>
-                  <TableCell>{header}</TableCell>
+    <Container size="lg" px="xs">
+      <Grid justify="center">
+        <Grid.Col span={12} md={10}>
+          <Group position="apart" mb="md">
+            <Text weight={500} size="lg">List of Entries</Text>
+            <Button variant="filled" color="blue" onClick={handleSort}>
+              Sort by Location
+            </Button>
+          </Group>
+          <Paper shadow="xs" p="md">
+            <ScrollArea>
+              {!isMobile ? (
+                <Table style={{ borderCollapse: 'collapse', width: '100%' }}>
+                  <thead>
+                    <tr>
+                      <th style={{ border: '1px solid #ddd', padding: '8px' }}>Property</th>
+                      {currentRows.map((_, index) => (
+                        <th key={index} style={{ border: '1px solid #ddd', padding: '8px' }}>Entry {index + 1}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {headers.map((header) => (
+                      <tr key={header}>
+                        <td style={{ border: '1px solid #ddd', padding: '8px' }}>{header}</td>
+                        {currentRows.map((info, index) => (
+                          <td key={index} style={{ border: '1px solid #ddd', padding: '8px' }}>{renderCellContent(info, header)}</td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </Table>
+              ) : (
+                <SimpleGrid cols={1} spacing="xs">
                   {currentRows.map((info, index) => (
-                    <TableCell key={index}>{renderCellContent(info, header)}</TableCell>
+                    <Box key={index} p="md" mb="xs" style={{ border: '1px solid #ddd', borderRadius: '5px' }}>
+                      {headers.map((header) => (
+                        <Box key={header} mb="sm">
+                          <Text weight={700} size="sm">{header}</Text>
+                          <Text size="sm">{renderCellContent(info, header)}</Text>
+                        </Box>
+                      ))}
+                      <Button 
+                        variant="filled" 
+                        color="red" 
+                        onClick={() => handleDelete(info.id)}
+                      >
+                        Delete
+                      </Button>
+                    </Box>
                   ))}
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-        {tableData.length > rowsPerPage && (
-          <Box display="flex" justifyContent="center" mt={2}>
-            {Array.from(
-              { length: Math.ceil(tableData.length / rowsPerPage) },
-              (_, index) => (
-                <Button
-                  key={index}
-                  onClick={() => setCurrentPage(index + 1)}
-                  className={currentPage === index + 1 ? "active" : ""}
-                >
-                  {index + 1}
-                </Button>
-              )
-            )}
-          </Box>
-        )}
+                </SimpleGrid>
+              )}
+            </ScrollArea>
+          </Paper>
+          {tableData.length > rowsPerPage && (
+            <Group position="center" mt="md">
+              {Array.from(
+                { length: Math.ceil(tableData.length / rowsPerPage) },
+                (_, index) => (
+                  <Button
+                    key={index}
+                    onClick={() => setCurrentPage(index + 1)}
+                    variant={currentPage === index + 1 ? "filled" : "outline"}
+                    color="blue"
+                  >
+                    {index + 1}
+                  </Button>
+                )
+              )}
+            </Group>
+          )}
+        </Grid.Col>
       </Grid>
-    </Grid>
+    </Container>
   );
 };
 

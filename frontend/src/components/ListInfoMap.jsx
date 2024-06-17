@@ -13,6 +13,7 @@ import {
   Box,
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
+import { Container, Text, Paper as MantinePaper, SimpleGrid, useMantineTheme } from "@mantine/core";
 
 const ListInfoMap = ({ locationData }) => {
   const headers = [
@@ -45,65 +46,78 @@ const ListInfoMap = ({ locationData }) => {
 
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  const mantineTheme = useMantineTheme();
 
   return (
-    <TableContainer
-      component={Paper}
-      className="custom-table-container"
-      sx={{ border: 1, borderColor: "divider", backgroundColor: theme.palette.background.paper }}
-    >
+    <Container size="lg" px="xs">
       {isMobile ? (
-        <Box>
+        <SimpleGrid cols={1} spacing="xs" breakpoints={[{ maxWidth: 'sm', cols: 1 }]}>
           {headers.map((header) => (
-            <Box key={header} sx={{ display: "flex", flexDirection: "row", borderBottom: "1px solid rgba(224, 224, 224, 1)" }}>
-              <Box sx={{ flex: 1, padding: "8px", backgroundColor: theme.palette.primary.main, color: theme.palette.primary.contrastText, fontWeight: "bold" }}>
+            <MantinePaper
+              key={header}
+              shadow="xs"
+              radius="md"
+              p="md"
+              withBorder
+              style={{ backgroundColor: mantineTheme.colors.gray[0] }}
+            >
+              <Text
+                weight={700}
+                size="sm"
+                style={{ color: mantineTheme.colors.blue[7], marginBottom: mantineTheme.spacing.xs }}
+              >
                 {header}
-              </Box>
-              <Box sx={{ flex: 1, padding: "8px", color: theme.palette.text.primary }}>
+              </Text>
+              <Text size="sm" style={{ color: mantineTheme.colors.dark[9] }}>
                 {renderCellContent(locationData, header)}
-              </Box>
-            </Box>
+              </Text>
+            </MantinePaper>
           ))}
-        </Box>
+        </SimpleGrid>
       ) : (
-        <Table sx={{ minWidth: 650, borderCollapse: "collapse" }}>
-          <TableHead>
-            <TableRow>
-              {headers.map((header) => (
-                <TableCell
-                  key={header}
-                  sx={{
-                    fontWeight: "bold",
-                    backgroundColor: theme.palette.primary.main,
-                    color: theme.palette.primary.contrastText,
-                    border: 1,
-                    borderColor: "divider",
-                    textAlign: "center",
-                  }}
-                >
-                  {header}
-                </TableCell>
-              ))}
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            <TableRow sx={{ "&:last-child td, &:last-child th": { border: 0 } }}>
-              {headers.map((header) => (
-                <TableCell
-                  key={header}
-                  sx={{
-                    borderBottom: "1px solid rgba(224, 224, 224, 1)",
-                    textAlign: "center",
-                  }}
-                >
-                  {renderCellContent(locationData, header)}
-                </TableCell>
-              ))}
-            </TableRow>
-          </TableBody>
-        </Table>
+        <TableContainer
+          component={Paper}
+          sx={{ border: 1, borderColor: "divider", backgroundColor: theme.palette.background.paper }}
+        >
+          <Table sx={{ minWidth: 650, borderCollapse: "collapse" }}>
+            <TableHead>
+              <TableRow>
+                {headers.map((header) => (
+                  <TableCell
+                    key={header}
+                    sx={{
+                      fontWeight: "bold",
+                      backgroundColor: theme.palette.primary.main,
+                      color: theme.palette.primary.contrastText,
+                      border: 1,
+                      borderColor: "divider",
+                      textAlign: "center",
+                    }}
+                  >
+                    {header}
+                  </TableCell>
+                ))}
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              <TableRow sx={{ "&:last-child td, &:last-child th": { border: 0 } }}>
+                {headers.map((header) => (
+                  <TableCell
+                    key={header}
+                    sx={{
+                      borderBottom: "1px solid rgba(224, 224, 224, 1)",
+                      textAlign: "center",
+                    }}
+                  >
+                    {renderCellContent(locationData, header)}
+                  </TableCell>
+                ))}
+              </TableRow>
+            </TableBody>
+          </Table>
+        </TableContainer>
       )}
-    </TableContainer>
+    </Container>
   );
 };
 

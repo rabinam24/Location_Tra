@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import "../styles.css";
 import "leaflet/dist/leaflet.css";
 import { MapContainer, TileLayer, Marker } from "react-leaflet";
-import Button from "@mui/material/Button";
-import { Modal, Box, Typography } from "@mui/material";
+import { Modal, Box, Typography, CircularProgress, Button } from "@mui/material"; // Import Button from @mui/material
 import MapData from "../Routes/Home";
 
 const MapWithWebSocket = () => {
@@ -14,6 +12,7 @@ const MapWithWebSocket = () => {
   const [openModal, setOpenModal] = useState(false);
   const [locationData, setLocationData] = useState([]);
   const [selectedLocation, setSelectedLocation] = useState(null);
+  const [loading, setLoading] = useState(true); // Track loading state
 
   useEffect(() => {
     const fetchData = async () => {
@@ -22,6 +21,8 @@ const MapWithWebSocket = () => {
         setLocationData(response.data);
       } catch (error) {
         console.error("Error fetching location data:", error);
+      } finally {
+        setLoading(false); // Set loading to false whether fetch succeeded or failed
       }
     };
 
@@ -33,18 +34,27 @@ const MapWithWebSocket = () => {
     setOpenModal(true);
   };
 
+  if (loading) {
+    return <CircularProgress />; // Show loading indicator while fetching data
+  }
+
   return (
     <div>
-      <MapContainer center={mapCenter} zoom={zoomLevel} style={{ height: "400px", margin: "10px 0" }}>
-        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-        {locationData.map((location, index) => (
-          <Marker
-            key={index}
-            position={[location.latitude, location.longitude]}
-            eventHandlers={{ click: () => handleMarkerClick(location) }}
-          />
-        ))}
-      </MapContainer>
+      {locationData && locationData.length > 0 ? (
+        <MapContainer center={mapCenter} zoom={zoomLevel} style={{ height: "400px", margin: "10px 0" }}>
+          <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+          {locationData.map((location, index) => (
+            <Marker
+              key={index}
+              position={[location.latitude, location.longitude]}
+              eventHandlers={{ click: () => handleMarkerClick(location) }}
+            />
+          ))}
+        </MapContainer>
+      ) : (
+        <Typography>No location data available</Typography>
+      )}
+
       <Modal
         open={openModal}
         onClose={() => setOpenModal(false)}
@@ -55,9 +65,7 @@ const MapWithWebSocket = () => {
           <Typography id="modal-title" variant="h6" component="h2">
             Travel Log Details
           </Typography>
-          {selectedLocation && (
-            <MapData locationData={selectedLocation} />
-          )}
+          {selectedLocation && <MapData locationData={selectedLocation} />}
           <Button onClick={() => setOpenModal(false)} color="error" variant="contained" sx={{ mt: 2 }}>
             Close
           </Button>

@@ -10,6 +10,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"time"
 
@@ -39,12 +40,11 @@ type FormData struct {
 	MultipleImages     []string  `json:"multipleimages_urls"`
 	CreatedAt          time.Time `json:"created_at"`
 }
-
 type StartEnd struct {
-	UserID        int       `json:"userid"`
+	UserID        int       `json:"user_id"`
 	TripStarted   bool      `json:"trip_started"`
-	TripStartTime time.Time `json:"-"`
-	TripEndTime   time.Time `json:"-"`
+	TripStartTime time.Time `json:"trip_start_time"`
+	TripEndTime   time.Time `json:"trip_end_time"`
 }
 
 var upgrader = websocket.Upgrader{
@@ -198,7 +198,7 @@ func handleEndTrip(db *sql.DB) http.HandlerFunc {
 }
 
 func insertTripData(db *sql.DB, startEnd StartEnd) error {
-	query := `INSERT INTO trip (userid, trip_started, trip_start_time, trip_end_time) VALUES ($1, $2, $3, $4)`
+	query := `INSERT INTO trip (user_id, trip_started, trip_start_time, trip_end_time) VALUES ($1, $2, $3, $4)`
 	_, err := db.Exec(query, startEnd.UserID, startEnd.TripStarted, startEnd.TripStartTime, startEnd.TripEndTime)
 	if err != nil {
 		return err
@@ -558,11 +558,10 @@ func connectDB(cfg config) (*sql.DB, error) {
 
 func main() {
 	// Initialize MinIO client
-	endpoint := "172.17.0.1:9000"
-
-	accessKeyID := "JJiBrYDyIGUpRlXpTl00"
-	secretAccessKey := "lqD6aBXF5C793HQgOtZuQKlUwB5R5Z95FcLQFmU4"
-	useSSL := false
+	endpoint := os.Getenv("MINIO_ENDPOINT")
+	accessKeyID := os.Getenv("MINIO_ACCESS_KEY")
+	secretAccessKey := os.Getenv("MINIO_SECRET_KEY")
+	useSSL := os.Getenv("MINIO_SSL") == "true"
 
 	client, err := minio.New(endpoint, accessKeyID, secretAccessKey, useSSL)
 	if err != nil {
@@ -575,12 +574,12 @@ func main() {
 	flag.Parse()
 
 	if cfg.db.dsn == "" {
-		host := "localhost"
-		port := 5432
-		user := "binam"
-		password := "Bhandari"
-		dbname := "binam"
-		cfg.db.dsn = fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", host, port, user, password, dbname)
+		host := os.Getenv("DB_HOST")
+		port := os.Getenv("DB_PORT")
+		user := os.Getenv("DB_USER")
+		password := os.Getenv("DB_PASSWORD")
+		dbname := os.Getenv("DB_NAME")
+		cfg.db.dsn = fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable", host, port, user, password, dbname)
 	}
 
 	// Connect to the database
