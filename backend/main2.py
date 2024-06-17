@@ -18,9 +18,9 @@ from wtforms import Form,StringField,FloatField,FileField
 from werkzeug.utils import secure_filename
 import os
 import logging
-def createapp():
-    #Nothing in here
-    pass
+# def createapp():
+#     #Nothing in here
+#     pass
 
 # from config import db
 app = Flask(__name__)
@@ -158,7 +158,7 @@ def hello_world():
     directory = 'buildStaticReactVite'
     full_path = safe_join(directory,'hello')
     print(full_path)
-    return 'Hello from backend!'
+    return 'Hello World'
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in {'jpg', 'jpeg', 'png', 'gif'}
@@ -519,7 +519,7 @@ if __name__ == '__main__':
         os.makedirs('dummy')
     with app.app_context():
         db.create_all()
-    createapp()
+    # createapp()
     # with app.app_context():
     #     randomize()
     app.run(debug=True)
