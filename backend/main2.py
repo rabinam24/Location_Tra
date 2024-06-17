@@ -1,5 +1,6 @@
 # from flask import Flask
 from flask import Blueprint
+main2_bp = Blueprint('main2',__name__,url_prefix='/form')
 import base64
 from PIL import Image
 # from collections import OrderedDict
@@ -18,6 +19,7 @@ from werkzeug.utils import secure_filename
 import os
 import logging
 def createapp():
+    #Nothing in here
     pass
 
 # from config import db
@@ -28,7 +30,7 @@ app = Flask(__name__)
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///mydatabase.db'  # Change as needed
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///mydatabase2.db'  # Change as needed
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
@@ -151,7 +153,7 @@ def randomize():
     sql_code = db.Model.metadata.create_all(bind=db.engine)
     print(sql_code)
 
-@app.route('/')
+@main2_bp.route('/')
 def hello_world():
     directory = 'buildStaticReactVite'
     full_path = safe_join(directory,'hello')
@@ -168,7 +170,7 @@ def allowed_file(filename):
 # # Flask API to handle userform for the frontend react code
 
 # app = Flask(__name__)
-# @app.route('/')
+# @main2_bp.route('/')
 # def hello_world():
 #     return 'Hello from backend!'
 
@@ -181,8 +183,8 @@ def allowed_file(filename):
 # print("Database initialized successfully")
 app.config['UPLOAD_FOLDER'] = 'uploads'
 
-# @app.route('/submit-user-form', methods=['POST'])
-# @app.route('/form2',methods=['GET'])
+# @main2_bp.route('/submit-user-form', methods=['POST'])
+# @main2_bp.route('/form2',methods=['GET'])
 # def form2():
 #     data = request.args
     # try:
@@ -240,18 +242,18 @@ app.config['UPLOAD_FOLDER'] = 'uploads'
     #     return jsonify({'error': 'An error occurred'}), 500
     # return data
 
-# @app.route('/bibash')
+# @main2_bp.route('/bibash')
 # def bibash():
 #     return 'Bibash Acharya'
 
 
-# @app.route('/form2',methods=['POST'])
+# @main2_bp.route('/form2',methods=['POST'])
 # def form2():
 #     data = request.json
 #     return data
 
 
-@app.route('/submit-user-form', methods=['GET', 'POST'])
+@main2_bp.route('/submit-user-form', methods=['GET', 'POST'])
 def submit_user_form():
     if request.method == 'GET':
         data = request.args
@@ -484,7 +486,7 @@ def submit_user_form():
         # return "hahahha"
 
 
-@app.route('/start_trip',methods=['POST'])
+@main2_bp.route('/start_trip',methods=['POST'])
 def start_trip():
      # Assuming the frontend sends the current user's name
     # current_user = request.json.get('current_user')
@@ -501,7 +503,7 @@ def start_trip():
 
 
 
-# @app.route('/static/<path:pathLocation>')
+# @main2_bp.route('/static/<path:pathLocation>')
 # def serve_static(pathLocation):
 #     return send_file(f'buildStaticReactVite/{pathLocation}')
 
