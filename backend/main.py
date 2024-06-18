@@ -279,7 +279,7 @@ def submit_user_form():
         print("Form Data:", form_data)
         # test1 = test_data2.get('location')
         # test2 = test_data2.get('gpslocation')
-         # Validate GPS location format
+        # Validate GPS location format
         if gpslocation.count(',') != 1:
             return jsonify({"error": "GPS location must contain exactly two float values separated by a comma"}), 400
         print(location,gpslocation)
@@ -346,12 +346,40 @@ def submit_user_form():
         
         form_data_log = request.form.to_dict()
         file_data_log = request.files.to_dict()
+        m2 = request.files
+        print("nothing in here",type(request.files))
+        print("ok start")
+        print(m2)
+        print("to dickitng type")
+        print(type(request.files.to_dict()))
+        print("closed")
+        print("after to dikcting")
+        print(request.files.to_dict())
         # Log form data
         logger.info(f"Form data received: {form_data_log}")
         # Log file data (file names and content types)
+        # print("outside the filelog ",type(file_data_log))
+        # print("hello from log ")
+        # print(file_data_log)
+        # print("exit")
+        # print("about to enter ",type(file_data_log.items()))
+        # print("entering")
+        # print(file_data_log.items())
+        # print("exited")
         for filename_log, file_log in file_data_log.items():
-            logger.info(f"File received: {filename_log} (content type: {file_log.content_type})")
-
+            if availableisp.lower()=='yes':
+                # print("inside yes: heheh huhuh",type(filename_log),type(file_log))
+                # print(filename_log)
+                # print("breaking bad")
+                # print(file_log)
+                # selectisp = form_data.get('selectisp')
+                # ispimages = request.files.getlist('ispimages')
+                # for particular_isp in ispimages:
+                #     ispfilename = particular_isp.filename
+                logger.info(f"File received: {filename_log} FilenameReceived:{file_log.filename} (content type: {file_log.content_type})")
+            elif availableisp.lower()=='no':
+                print("outside no")
+                logger.info(f"File received: {filename_log} FilenameReceived:{None if str(filename_log)=='ispimages' else file_log.filename}) (content type: {file_log.content_type})")
 
 
         # Save the uploaded files
@@ -398,7 +426,7 @@ def submit_user_form():
         print(type(longitude_float))
         with open(file_path,'rb') as image_file:
             encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
-            print(encoded_string)
+            # print(encoded_string)
             # print(encoded_string)
         submit_location: str = location
         submit_latitude: float = latitude_float
