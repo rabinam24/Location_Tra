@@ -22,7 +22,7 @@ const ListInfoMap = ({ locationData }) => {
     "Select Pole Location",
     "Description",
     "Available ISP",
-    "Select ISP",
+    "ISP",
   ];
 
   const renderCellContent = (info, header) => {
@@ -37,7 +37,7 @@ const ListInfoMap = ({ locationData }) => {
         return info.description;
       case "Available ISP":
         return info.availableisp;
-      case "Select ISP":
+      case "ISP":
         return info.selectisp;
       default:
         return null;

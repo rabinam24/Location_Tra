@@ -1,29 +1,18 @@
-# Stage 1: Build the React application
-FROM node:alpine AS build
+FROM node:20 AS build
 
-# Set working directory
-WORKDIR /app
+WORKDIR /frontend
 
-# Copy package.json and package-lock.json (if exists)
-COPY package*.json ./
+COPY package.json yarn.lock ./
 
-# Install dependencies
-RUN npm install
+# Replace 'minio-server' with the IP address of your MinIO server
+RUN echo "192.168.1.100 minio-server" >> /etc/hosts
 
-# Copy the rest of the application
-COPY . .
+RUN yarn install
 
-# Build the application
-RUN npm run build
+COPY . ./
 
-# Stage 2: Serve the application using Nginx
+RUN yarn build
+
 FROM nginx:alpine
 
-# Copy build output from stage 1 into Nginx server
-COPY --from=build /app/dist /usr/share/nginx/html
-
-# Expose port 80
-EXPOSE 80
-
-# Command to start Nginx server
-CMD ["nginx", "-g", "daemon off;"]
+COPY --from=build /frontend/dist /usr/share/nginx/html

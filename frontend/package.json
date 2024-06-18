@@ -46,6 +46,8 @@
     "recharts": "^2.12.6",
     "styled-components": "^6.1.11",
     "websocket": "^1.0.35"
+    
+
   },
   "peerDependencies": {
     "react": "^17.0.0 || ^18.3.0",

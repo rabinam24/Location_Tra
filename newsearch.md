@@ -715,3 +715,7 @@ func main() {
 		log.Fatal("Error starting server:", err)
 	}
 }
+
+
+MINIO_ACCESS_KEY: "k0JLlzjNVbU16RPhAdYC"
+MINIO_SECRET_KEY: "BTYmpAe0vIWeiYa6bxGKal49E0Txj3j9jV9vXO0Z"

@@ -16,7 +16,8 @@ import (
 
 	"github.com/gorilla/websocket"
 	_ "github.com/lib/pq"
-	"github.com/minio/minio-go"
+	"github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7/pkg/credentials"
 )
 
 type config struct {
@@ -45,6 +46,11 @@ type StartEnd struct {
 	TripStarted   bool      `json:"trip_started"`
 	TripStartTime time.Time `json:"trip_start_time"`
 	TripEndTime   time.Time `json:"trip_end_time"`
+}
+
+type GPSData struct {
+	Date     time.Time `json:"date"`
+	Distance float64   `json:"distance"`
 }
 
 var upgrader = websocket.Upgrader{
@@ -206,12 +212,26 @@ func insertTripData(db *sql.DB, startEnd StartEnd) error {
 	return nil
 }
 
+// uploadToMinIO uploads multiple objects to MinIO and returns their URLs.
 func uploadToMinIO(minioClient *minio.Client, endpoint, bucketName string, objectNames []string, imageDatas [][]byte) ([]string, error) {
 	var imageURLs []string
 
+	// Ensure the bucket exists
+	ctx := context.Background()
+	exists, err := minioClient.BucketExists(ctx, bucketName)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		err = minioClient.MakeBucket(ctx, bucketName, minio.MakeBucketOptions{})
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	for i, data := range imageDatas {
 		reader := bytes.NewReader(data)
-		_, err := minioClient.PutObject(bucketName, objectNames[i], reader, int64(len(data)), minio.PutObjectOptions{
+		_, err := minioClient.PutObject(ctx, bucketName, objectNames[i], reader, int64(len(data)), minio.PutObjectOptions{
 			ContentType: "image/jpeg",
 		})
 		if err != nil {
@@ -380,6 +400,73 @@ func handleUserData(db *sql.DB) http.HandlerFunc {
 	}
 }
 
+func handleTotalDistance(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// we need the distance of last 4 days, we need to calculate the distance
+		// we need to use the gps distance of the each day and calculate the distance
+
+		// calculate the date range for last 4 days
+		endDate := time.Now().UTC().Truncate(24 * time.Hour)
+		startDate := endDate.AddDate(0, 0, -3)
+
+		// Query to fetch the gpsdata from last 4 days
+
+		query := `SELECT date,distance FROM gps_data WHERE data >=$1 and date<=$2`
+
+		rows, err := db.Query(query, startDate, endDate)
+		if err != nil {
+			log.Printf("Error scanning rows %v", err)
+			http.Error(w, "Error scanning rows", http.StatusInternalServerError)
+			return
+		}
+		defer rows.Close()
+
+		var totalDistance float64
+
+		// Iterate through the rows and calculate the total distance
+		for rows.Next() {
+
+			var gpsData GPSData
+			err := rows.Scan(&gpsData.Date, &gpsData.Distance)
+			if err != nil {
+				log.Printf("Error scanning rows: %v", err)
+				http.Error(w, "Error scanning rows", http.StatusInternalServerError)
+				return
+			}
+			totalDistance += gpsData.Distance
+		}
+		//check if there's any  error in the row iterations
+		if err := rows.Err(); err != nil {
+			log.Printf("Error iterating over rows: %v", err)
+			http.Error(w, "Error iterating over rows", http.StatusInternalServerError)
+			return
+		}
+
+		//preparing the json response
+
+		response := struct {
+			TotalDistance float64 `json:"total_distance"`
+		}{
+			TotalDistance: totalDistance,
+		}
+
+		// convert the response to json
+
+		jsonResponse, err := json.Marshal(response)
+		if err != nil {
+			log.Printf("Error marshalling Json: %v", err)
+			http.Error(w, "Error creating Json response", http.StatusInternalServerError)
+			return
+		}
+		// set content-type header and write response
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write(jsonResponse)
+
+	}
+
+}
+
 func handleGetFormData(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		rows, err := db.Query("SELECT id, location, latitude, longitude, selectpole, selectpolestatus, selectpolelocation, description, poleimage, availableisp, selectisp, multipleimages, created_at FROM userform")
@@ -539,18 +626,14 @@ func handlegetGpsData(db *sql.DB) http.HandlerFunc {
 		}
 	}
 }
-
 func connectDB(cfg config) (*sql.DB, error) {
+	// Additional debug statement for DSN
+	fmt.Println("Connecting to database with DSN:", cfg.db.dsn)
 	db, err := sql.Open("postgres", cfg.db.dsn)
 	if err != nil {
 		return nil, err
 	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	err = db.PingContext(ctx)
-	if err != nil {
+	if err := db.Ping(); err != nil {
 		return nil, err
 	}
 	return db, nil
@@ -563,7 +646,20 @@ func main() {
 	secretAccessKey := os.Getenv("MINIO_SECRET_KEY")
 	useSSL := os.Getenv("MINIO_SSL") == "true"
 
-	client, err := minio.New(endpoint, accessKeyID, secretAccessKey, useSSL)
+	// Debugging statements to verify environment variables
+	fmt.Println("MINIO_ENDPOINT:", endpoint)
+	fmt.Println("MINIO_ACCESS_KEY:", accessKeyID)
+	fmt.Println("MINIO_SECRET_KEY:", secretAccessKey)
+	fmt.Println("MINIO_SSL:", useSSL)
+
+	if endpoint == "" {
+		log.Fatalln("MINIO_ENDPOINT is not set or empty")
+	}
+
+	minioClient, err := minio.New(endpoint, &minio.Options{
+		Creds:  credentials.NewStaticV4(accessKeyID, secretAccessKey, ""),
+		Secure: useSSL,
+	})
 	if err != nil {
 		log.Fatalln("Failed to initialize MinIO client:", err)
 	}
@@ -579,6 +675,14 @@ func main() {
 		user := os.Getenv("DB_USER")
 		password := os.Getenv("DB_PASSWORD")
 		dbname := os.Getenv("DB_NAME")
+
+		// Debugging statements to verify database environment variables
+		fmt.Println("DB_HOST:", host)
+		fmt.Println("DB_PORT:", port)
+		fmt.Println("DB_USER:", user)
+		fmt.Println("DB_PASSWORD:", password)
+		fmt.Println("DB_NAME:", dbname)
+
 		cfg.db.dsn = fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable", host, port, user, password, dbname)
 	}
 
@@ -591,7 +695,7 @@ func main() {
 
 	// Set up HTTP handlers with required parameters
 	bucketName := "location-tracker"
-	http.HandleFunc("/submit-form", handleFormData(db, client, bucketName, endpoint))
+	http.HandleFunc("/submit-form", handleFormData(db, minioClient, bucketName, endpoint))
 	http.HandleFunc("/user-data", handleUserData(db))
 	http.HandleFunc("/api/data/", handleDeleteData(db))
 	http.HandleFunc("/api/gps-data", handlegetGpsData(db))
