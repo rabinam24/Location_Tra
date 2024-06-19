@@ -1,5 +1,6 @@
 # from flask import Flask
 from flask import Blueprint
+main2_bp = Blueprint('main2',__name__,url_prefix='/form')
 import base64
 from PIL import Image
 # from collections import OrderedDict
@@ -17,7 +18,9 @@ from wtforms import Form,StringField,FloatField,FileField
 from werkzeug.utils import secure_filename
 import os
 import logging
-from functools import wraps
+# def createapp():
+#     #Nothing in here
+#     pass
 
 # from config import db
 app = Flask(__name__)
@@ -27,7 +30,7 @@ app = Flask(__name__)
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///mydatabase.db'  # Change as needed
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///mydatabase2.db'  # Change as needed
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
@@ -150,12 +153,12 @@ def randomize():
     sql_code = db.Model.metadata.create_all(bind=db.engine)
     print(sql_code)
 
-@app.route('/')
+@main2_bp.route('/')
 def hello_world():
     directory = 'buildStaticReactVite'
     full_path = safe_join(directory,'hello')
     print(full_path)
-    return 'Hello from backend!'
+    return 'Hello World'
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in {'jpg', 'jpeg', 'png', 'gif'}
@@ -167,7 +170,7 @@ def allowed_file(filename):
 # # Flask API to handle userform for the frontend react code
 
 # app = Flask(__name__)
-# @app.route('/')
+# @main2_bp.route('/')
 # def hello_world():
 #     return 'Hello from backend!'
 
@@ -180,8 +183,8 @@ def allowed_file(filename):
 # print("Database initialized successfully")
 app.config['UPLOAD_FOLDER'] = 'uploads'
 
-# @app.route('/submit-user-form', methods=['POST'])
-# @app.route('/form2',methods=['GET'])
+# @main2_bp.route('/submit-user-form', methods=['POST'])
+# @main2_bp.route('/form2',methods=['GET'])
 # def form2():
 #     data = request.args
     # try:
@@ -239,18 +242,18 @@ app.config['UPLOAD_FOLDER'] = 'uploads'
     #     return jsonify({'error': 'An error occurred'}), 500
     # return data
 
-# @app.route('/bibash')
+# @main2_bp.route('/bibash')
 # def bibash():
 #     return 'Bibash Acharya'
 
 
-# @app.route('/form2',methods=['POST'])
+# @main2_bp.route('/form2',methods=['POST'])
 # def form2():
 #     data = request.json
 #     return data
 
 
-@app.route('/submit-user-form', methods=['GET', 'POST'])
+@main2_bp.route('/submit-user-form', methods=['GET', 'POST'])
 def submit_user_form():
     if request.method == 'GET':
         data = request.args
@@ -280,7 +283,7 @@ def submit_user_form():
         print("Form Data:", form_data)
         # test1 = test_data2.get('location')
         # test2 = test_data2.get('gpslocation')
-        # Validate GPS location format
+         # Validate GPS location format
         if gpslocation.count(',') != 1:
             return jsonify({"error": "GPS location must contain exactly two float values separated by a comma"}), 400
         print(location,gpslocation)
@@ -347,40 +350,12 @@ def submit_user_form():
         
         form_data_log = request.form.to_dict()
         file_data_log = request.files.to_dict()
-        m2 = request.files
-        print("nothing in here",type(request.files))
-        print("ok start")
-        print(m2)
-        print("to dickitng type")
-        print(type(request.files.to_dict()))
-        print("closed")
-        print("after to dikcting")
-        print(request.files.to_dict())
         # Log form data
         logger.info(f"Form data received: {form_data_log}")
         # Log file data (file names and content types)
-        # print("outside the filelog ",type(file_data_log))
-        # print("hello from log ")
-        # print(file_data_log)
-        # print("exit")
-        # print("about to enter ",type(file_data_log.items()))
-        # print("entering")
-        # print(file_data_log.items())
-        # print("exited")
         for filename_log, file_log in file_data_log.items():
-            if availableisp.lower()=='yes':
-                # print("inside yes: heheh huhuh",type(filename_log),type(file_log))
-                # print(filename_log)
-                # print("breaking bad")
-                # print(file_log)
-                # selectisp = form_data.get('selectisp')
-                # ispimages = request.files.getlist('ispimages')
-                # for particular_isp in ispimages:
-                #     ispfilename = particular_isp.filename
-                logger.info(f"File received: {filename_log} FilenameReceived:{file_log.filename} (content type: {file_log.content_type})")
-            elif availableisp.lower()=='no':
-                print("outside no")
-                logger.info(f"File received: {filename_log} FilenameReceived:{None if str(filename_log)=='ispimages' else file_log.filename}) (content type: {file_log.content_type})")
+            logger.info(f"File received: {filename_log} (content type: {file_log.content_type})")
+
 
 
         # Save the uploaded files
@@ -427,7 +402,7 @@ def submit_user_form():
         print(type(longitude_float))
         with open(file_path,'rb') as image_file:
             encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
-            # print(encoded_string)
+            print(encoded_string)
             # print(encoded_string)
         submit_location: str = location
         submit_latitude: float = latitude_float
@@ -510,14 +485,10 @@ def submit_user_form():
         # return jsonify({"location":f"{test1}","gpslocation":f"{test2}","description":"empty"})
         # return "hahahha"
 
-# Example data structure to hold trip data
-trips = {}
 
-# CRUD Operations for TRIP
-# Create Route for a particular trip.. i.e Starting a trip
-@app.route('/start_trip',methods=['POST'])
+@main2_bp.route('/start_trip',methods=['POST'])
 def start_trip():
-    # Assuming the frontend sends the current user's name
+     # Assuming the frontend sends the current user's name
     # current_user = request.json.get('current_user')
     # Get the current time as the trip start time
     start_time = datetime.now()
@@ -526,116 +497,29 @@ def start_trip():
     start_time_formatted = start_time.strftime('%Y-%m-%d %H:%M:%S')
     print(start_time_formatted)
     print(f"started : True, startTime: {start_time_formatted}")
-    data = request.json
-    if not data or 'trip_id' not in data or 'user_id' not in data or 'start_location' not in data:
-        return jsonify({'error': 'Bad Request', 'message': 'Trip ID, User ID, and Start Location are required'}), 400
-
-    trip_id = data['trip_id']
-    user_id = data['user_id']
-    start_location = data['start_location']
-    
-    if trip_id in trips:
-        return jsonify({'error': 'Conflict', 'message': 'Trip already started'}), 409
-
-    trips[trip_id] = {
-        'user_id': user_id,
-        'start_location': start_location,
-        'start_time': data.get('start_time'),
-        'status': 'ongoing'
-    } # mock trip data before inserting into the database..Database already created
-    # this thips[trip_id] data need to be inserted into the database
-
-    # return jsonify({'message': 'Trip started successfully', 'trip': trips[trip_id]}), 201
-    return jsonify({'started': True, 'startTime': start_time_formatted,'message': 'Trip started successfully', 'trip': trips[trip_id]}),201
-
-# Read ROUTE for a particular trip
-@app.route('/trips/<int:trip_id>', methods=['GET'])
-def get_trip(trip_id):
-    trip = trips.get(trip_id) #query from the database
-    if not trip:
-        return jsonify({'error': 'Not Found', 'message': 'Trip not found'}), 404
-    return jsonify(trip)
-
-# Update Route for a particular trip
-@app.route('/trips/<int:trip_id>', methods=['PUT'])
-def update_trip(trip_id):
-    trip = trips.get(trip_id) #query from the database
-    data = request.get_json()
-    
-    trip.username = data['username']
-    trip.start_at = datetime.strptime(data['start_at'], '%Y-%m-%d %H:%M:%S')
-    trip.from_gps = data['from_gps']
-    trip.end_at = datetime.strptime(data['end_at'], '%Y-%m-%d %H:%M:%S')
-    trip.distance = data['distance']
-
-    return jsonify({'message': 'Trip updated successfully!'})
+    return jsonify({'started': True, 'startTime': start_time_formatted})
 
 
-# Delete Route for a particular trip
-@app.route('/trips/<int:trip_id>', methods=['DELETE'])
-def delete_trip(trip_id):
-    trip = trips.get(trip_id) #the trip refers  to particualar trip to delete..actually to be queried from the database
-    del trips[trip] # logic to delete a trip
-    return jsonify({'message': 'Trip deleted successfully!'})
 
 
-# Read Route for all trips (reading list of trips)
-@app.route('/trips', methods=['GET'])
-def get_all_trips():
-    return jsonify(trips)
 
-# Decorator to check if a trip has started
-def trip_started_required(func):
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        trip_id = kwargs.get('trip_id')
-        if trip_id is None or trip_id not in trips or trips[trip_id]['status'] != 'ongoing':
-            return jsonify({'error': 'Unauthorized', 'message': 'Trip must be started before ending it'}), 401
-        return func(*args, **kwargs)
-    return wrapper
-
-# Route for end_trip
-@app.route('/end_trip', methods=['POST'])
-@trip_started_required
-def end_trip():
-    data = request.json
-    
-    if not data or 'trip_id' not in data or 'end_location' not in data:
-        return jsonify({'error': 'Bad Request', 'message': 'Trip ID and End Location are required'}), 400
-
-    trip_id = data['trip_id']
-    end_location = data['end_location']
-    
-    if trip_id not in trips:
-        return jsonify({'error': 'Not Found', 'message': 'Trip not found'}), 404
-    
-    if trips[trip_id]['status'] == 'ended':
-        return jsonify({'error': 'Conflict', 'message': 'Trip already ended'}), 409
-
-    trips[trip_id]['end_location'] = end_location
-    trips[trip_id]['end_time'] = data.get('end_time')  # or trips[trip_id]['end_time'] = datetime.now()
-    trips[trip_id]['status'] = 'ended'
-    # these data trips[trip_id]['end_location'], trips[trip_id]['end_location'], trips[trip_id]['status'] = 'ended' need to be inserted into the database
-
-    return jsonify({'message': 'Trip ended successfully', 'trip': trips[trip_id]}), 20
-
-
-# @app.route('/static/<path:pathLocation>')
+# @main2_bp.route('/static/<path:pathLocation>')
 # def serve_static(pathLocation):
 #     return send_file(f'buildStaticReactVite/{pathLocation}')
 
 
 
 
-# print(app.url_map)
+print(app.url_map)
 if __name__ == '__main__':
-    # print("This must be either True or False",os.path.exists('dummy'))
+    print("This must be either True or False",os.path.exists('dummy'))
     if not os.path.exists(app.config['UPLOAD_FOLDER']):
         os.makedirs(app.config['UPLOAD_FOLDER'])
     if not os.path.exists('dummy'):
         os.makedirs('dummy')
     with app.app_context():
         db.create_all()
+    # createapp()
     # with app.app_context():
     #     randomize()
     app.run(debug=True)
