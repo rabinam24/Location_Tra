@@ -5,6 +5,7 @@ import { MapContainer, TileLayer, Marker } from "react-leaflet";
 import { Modal, Box, Typography, CircularProgress, Button } from "@mui/material"; // Import Button from @mui/material
 import MapData from "../Routes/Home";
 
+
 const MapWithWebSocket = () => {
   const [socket, setSocket] = useState(null);
   const [mapCenter, setMapCenter] = useState([27.6714893, 85.3120526]);
@@ -52,7 +53,7 @@ const MapWithWebSocket = () => {
           ))}
         </MapContainer>
       ) : (
-        <Typography>No location data available</Typography>
+        <Typography> Not any Location.... Load the location first...</Typography>
       )}
 
       <Modal

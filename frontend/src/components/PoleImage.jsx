@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import Grid from "@mui/material/Grid";
-import { Button } from "@mui/material";
-import FormControl from "@mui/material/FormControl";
+import { Button, Skeleton, FormControl } from "@mui/material";
 
 const LatestPoleImage = () => {
   const [poleImage, setPoleImage] = useState(null);
   const [multipleImages, setMultipleImages] = useState([]);
   const [showUserData, setShowUserData] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const handleUserDataClick = () => {
     setShowUserData(!showUserData);
@@ -22,6 +22,8 @@ const LatestPoleImage = () => {
         setMultipleImages(response.data.multipleImages);
       } catch (error) {
         console.error("Error fetching pole image:", error);
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -30,11 +32,8 @@ const LatestPoleImage = () => {
 
   return (
     <div>
-      {/* <FormControl style={{ margin: "8px 2px" }}></FormControl> */}
-      <FormControl style={{margin:"10px"}}></FormControl>
-      <Grid
-      container
-      justifyContent="center">
+      <FormControl style={{ margin: "10px" }}></FormControl>
+      <Grid container justifyContent="center">
         <Button
           variant="contained"
           color="primary"
@@ -45,32 +44,40 @@ const LatestPoleImage = () => {
       </Grid>
       {showUserData && (
         <>
-          {poleImage && (
+          {loading ? (
             <div>
-              <h2>Pole Image</h2>
-              <img
-                src={poleImage}
-                alt="Pole"
-                style={{ width: "450px", height: "400px" }}
-              />
+              <Skeleton variant="rectangular" width={450} height={400} />
             </div>
-          )}
-          {multipleImages.length > 0 && (
-            <div>
-              <h2>Multiple Images</h2>
-              {multipleImages.map((image, index) => (
-                <img
-                  key={index}
-                  src={image}
-                  alt={`Multiple ${index}`}
-                  style={{ width: "450px", height: "400px" }}
-                />
-              ))}
-            </div>
+          ) : (
+            <>
+              {poleImage && (
+                <div>
+                  <h2>Pole Image</h2>
+                  <img
+                    src={poleImage}
+                    alt="Pole"
+                    style={{ width: "450px", height: "400px" }}
+                  />
+                </div>
+              )}
+              {multipleImages.length > 0 && (
+                <div>
+                  <h2>Multiple Images</h2>
+                  {multipleImages.map((image, index) => (
+                    <img
+                      key={index}
+                      src={image}
+                      alt={`Multiple ${index}`}
+                      style={{ width: "450px", height: "400px" }}
+                    />
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </>
       )}
-      <FormControl style={{marginbotton:"5px"}}></FormControl>
+      <FormControl style={{ marginBottom: "5px" }}></FormControl>
     </div>
   );
 };

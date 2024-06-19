@@ -1,4 +1,4 @@
-version: '3.8'
+version: '3'
 
 services:
   db:
@@ -16,40 +16,66 @@ services:
       retries: 5
     volumes:
       - ./docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
+    networks:
+      - app-network
 
   minio-server:
     image: minio/minio
     ports:
       - "9000:9000"
+      - "9001:9001"
     environment:
-      MINIO_ROOT_USER: "minioadmin"
-      MINIO_ROOT_PASSWORD: "minioadmin"
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
     command: server /data
     volumes:
-      - ./minio-data:/data
-      - ./minio-cors.json:/config/minio-cors.json
+      - minio_data:/data
+      - ./minio-cors.json:/config/minio/cors.json
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    networks:
+      - app-network
 
   userform:
     build:
-      context: ./userform # Ensure this path points to the userform directory
-      dockerfile: Dockerfile # Ensure the Dockerfile is named Dockerfile in the userform directory
+      context: ./userform
+      dockerfile: Dockerfile
     environment:
       DB_HOST: db
-      DB_PORT: 5432
+      DB_PORT: "5432"
       DB_USER: binam
       DB_PASSWORD: Bhandari
       DB_NAME: binam
-      MINIO_ENDPOINT: "minio-server:9000"
-      MINIO_ACCESS_KEY: "B1IldoZs6RJWjsziHeIe"
-      MINIO_SECRET_KEY: "BzX4nEffSluTotNmhcmAXRhS94jVSdT6m2mJdCaJ"
+      MINIO_ENDPOINT: 172.17.0.1:9000
+      MINIO_ACCESS_KEY: "DXeRSzJ1flBOehb5Bc1o"
+      MINIO_SECRET_KEY: "tgCTzYPo8YeWzktmIl9A35PqR1TsiPN8wjOtslii"
       MINIO_SSL: "false"
-      EXTERNAL_MINIO_ENDPOINT: "http://<host-ip>:9000"
     ports:
       - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+      minio-server:
+        condition: service_healthy
+    networks:
+      - app-network
 
   frontend:
     build:
-      context: ./frontend # Ensure this path points to the frontend directory
-      dockerfile: Dockerfile # Ensure the Dockerfile is named Dockerfile in the frontend directory
+      context: ./frontend
+      dockerfile: Dockerfile
     ports:
       - "3000:80"
+    networks:
+      - app-network
+
+volumes:
+  minio_data:
+    driver: local
+
+networks:
+  app-network:
+    driver: bridge
