@@ -2,9 +2,21 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import "leaflet/dist/leaflet.css";
 import { MapContainer, TileLayer, Marker } from "react-leaflet";
+import L from "leaflet"; // Import Leaflet
 import { Modal, Box, Typography, CircularProgress, Button } from "@mui/material"; // Import Button from @mui/material
 import MapData from "../Routes/Home";
 
+// Fix for Leaflet's default marker icon
+import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
+import markerIcon from 'leaflet/dist/images/marker-icon.png';
+import markerShadow from 'leaflet/dist/images/marker-shadow.png';
+
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: markerIcon2x,
+  iconUrl: markerIcon,
+  shadowUrl: markerShadow,
+});
 
 const MapWithWebSocket = () => {
   const [socket, setSocket] = useState(null);
@@ -19,7 +31,13 @@ const MapWithWebSocket = () => {
     const fetchData = async () => {
       try {
         const response = await axios.get("http://localhost:8080/get-form-data");
-        setLocationData(response.data);
+        const data = response.data;
+        setLocationData(data);
+
+        // Set map center to the first location if available
+        if (data && data.length > 0) {
+          setMapCenter([data[0].latitude, data[0].longitude]);
+        }
       } catch (error) {
         console.error("Error fetching location data:", error);
       } finally {
@@ -43,7 +61,10 @@ const MapWithWebSocket = () => {
     <div>
       {locationData && locationData.length > 0 ? (
         <MapContainer center={mapCenter} zoom={zoomLevel} style={{ height: "400px", margin: "10px 0" }}>
-          <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+          <TileLayer
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            crossOrigin="anonymous" // Allow cross-origin requests for the map tiles
+          />
           {locationData.map((location, index) => (
             <Marker
               key={index}
@@ -53,7 +74,7 @@ const MapWithWebSocket = () => {
           ))}
         </MapContainer>
       ) : (
-        <Typography> Not any Location.... Load the location first...</Typography>
+        <Typography>Not any Location.... Load the location first...</Typography>
       )}
 
       <Modal
