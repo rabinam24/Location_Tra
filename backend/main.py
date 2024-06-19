@@ -509,10 +509,14 @@ def submit_user_form():
         # return jsonify({"location":f"{test1}","gpslocation":f"{test2}","description":"empty"})
         # return "hahahha"
 
+# Example data structure to hold trip data
+trips = {}
 
+# CRUD Operations for TRIP
+# Create Route for a particular trip.. i.e Starting a trip
 @app.route('/start_trip',methods=['POST'])
 def start_trip():
-     # Assuming the frontend sends the current user's name
+    # Assuming the frontend sends the current user's name
     # current_user = request.json.get('current_user')
     # Get the current time as the trip start time
     start_time = datetime.now()
@@ -521,10 +525,87 @@ def start_trip():
     start_time_formatted = start_time.strftime('%Y-%m-%d %H:%M:%S')
     print(start_time_formatted)
     print(f"started : True, startTime: {start_time_formatted}")
-    return jsonify({'started': True, 'startTime': start_time_formatted})
+    data = request.json
+    if not data or 'trip_id' not in data or 'user_id' not in data or 'start_location' not in data:
+        return jsonify({'error': 'Bad Request', 'message': 'Trip ID, User ID, and Start Location are required'}), 400
+
+    trip_id = data['trip_id']
+    user_id = data['user_id']
+    start_location = data['start_location']
+    
+    if trip_id in trips:
+        return jsonify({'error': 'Conflict', 'message': 'Trip already started'}), 409
+
+    trips[trip_id] = {
+        'user_id': user_id,
+        'start_location': start_location,
+        'start_time': data.get('start_time'),
+        'status': 'ongoing'
+    } # mock trip data before inserting into the database..Database already created
+    # this thips[trip_id] data need to be inserted into the database
+
+    # return jsonify({'message': 'Trip started successfully', 'trip': trips[trip_id]}), 201
+    return jsonify({'started': True, 'startTime': start_time_formatted,'message': 'Trip started successfully', 'trip': trips[trip_id]}),201
+
+# Read ROUTE for a particular trip
+@app.route('/trips/<int:trip_id>', methods=['GET'])
+def get_trip(trip_id):
+    trip = trips.get(trip_id) #query from the database
+    if not trip:
+        return jsonify({'error': 'Not Found', 'message': 'Trip not found'}), 404
+    return jsonify(trip)
+
+# Update Route for a particular trip
+@app.route('/trips/<int:trip_id>', methods=['PUT'])
+def update_trip(trip_id):
+    trip = trips.get(trip_id) #query from the database
+    data = request.get_json()
+    
+    trip.username = data['username']
+    trip.start_at = datetime.strptime(data['start_at'], '%Y-%m-%d %H:%M:%S')
+    trip.from_gps = data['from_gps']
+    trip.end_at = datetime.strptime(data['end_at'], '%Y-%m-%d %H:%M:%S')
+    trip.distance = data['distance']
+
+    return jsonify({'message': 'Trip updated successfully!'})
 
 
+# Delete Route for a particular trip
+@app.route('/trips/<int:trip_id>', methods=['DELETE'])
+def delete_trip(trip_id):
+    trip = trips.get(trip_id) #the trip refers  to particualar trip to delete..actually to be queried from the database
+    del trips[trip] # logic to delete a trip
+    return jsonify({'message': 'Trip deleted successfully!'})
 
+
+# Read Route for all trips (reading list of trips)
+@app.route('/trips', methods=['GET'])
+def get_all_trips():
+    return jsonify(trips)
+
+# Route for end_trip
+@app.route('/end_trip', methods=['POST'])
+def end_trip():
+    data = request.json
+    
+    if not data or 'trip_id' not in data or 'end_location' not in data:
+        return jsonify({'error': 'Bad Request', 'message': 'Trip ID and End Location are required'}), 400
+
+    trip_id = data['trip_id']
+    end_location = data['end_location']
+    
+    if trip_id not in trips:
+        return jsonify({'error': 'Not Found', 'message': 'Trip not found'}), 404
+    
+    if trips[trip_id]['status'] == 'ended':
+        return jsonify({'error': 'Conflict', 'message': 'Trip already ended'}), 409
+
+    trips[trip_id]['end_location'] = end_location
+    trips[trip_id]['end_time'] = data.get('end_time')
+    trips[trip_id]['status'] = 'ended'
+    # these data trips[trip_id]['end_location'], trips[trip_id]['end_location'], trips[trip_id]['status'] = 'ended' need to be inserted into the database
+
+    return jsonify({'message': 'Trip ended successfully', 'trip': trips[trip_id]}), 20
 
 
 # @app.route('/static/<path:pathLocation>')
