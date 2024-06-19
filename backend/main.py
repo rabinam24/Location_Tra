@@ -17,6 +17,7 @@ from wtforms import Form,StringField,FloatField,FileField
 from werkzeug.utils import secure_filename
 import os
 import logging
+from functools import wraps
 
 # from config import db
 app = Flask(__name__)
@@ -583,8 +584,19 @@ def delete_trip(trip_id):
 def get_all_trips():
     return jsonify(trips)
 
+# Decorator to check if a trip has started
+def trip_started_required(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        trip_id = kwargs.get('trip_id')
+        if trip_id is None or trip_id not in trips or trips[trip_id]['status'] != 'ongoing':
+            return jsonify({'error': 'Unauthorized', 'message': 'Trip must be started before ending it'}), 401
+        return func(*args, **kwargs)
+    return wrapper
+
 # Route for end_trip
 @app.route('/end_trip', methods=['POST'])
+@trip_started_required
 def end_trip():
     data = request.json
     
@@ -601,7 +613,7 @@ def end_trip():
         return jsonify({'error': 'Conflict', 'message': 'Trip already ended'}), 409
 
     trips[trip_id]['end_location'] = end_location
-    trips[trip_id]['end_time'] = data.get('end_time')
+    trips[trip_id]['end_time'] = data.get('end_time')  # or trips[trip_id]['end_time'] = datetime.now()
     trips[trip_id]['status'] = 'ended'
     # these data trips[trip_id]['end_location'], trips[trip_id]['end_location'], trips[trip_id]['status'] = 'ended' need to be inserted into the database
 
