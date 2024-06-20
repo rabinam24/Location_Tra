@@ -2,9 +2,9 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import "leaflet/dist/leaflet.css";
 import { MapContainer, TileLayer, Marker } from "react-leaflet";
-import L from "leaflet"; // Import Leaflet
-import { Modal, Box, Typography, CircularProgress, Button } from "@mui/material"; // Import Button from @mui/material
-import MapData from "../Routes/Home";
+import L from "leaflet";
+import { Modal, Box, Typography, CircularProgress, Button } from "@mui/material";
+import ListInfoMap from "./ListInfoMap"; // Adjust import path as necessary
 
 // Fix for Leaflet's default marker icon
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
@@ -19,13 +19,12 @@ L.Icon.Default.mergeOptions({
 });
 
 const MapWithWebSocket = () => {
-  const [socket, setSocket] = useState(null);
   const [mapCenter, setMapCenter] = useState([27.6714893, 85.3120526]);
   const [zoomLevel, setZoomLevel] = useState(13);
   const [openModal, setOpenModal] = useState(false);
   const [locationData, setLocationData] = useState([]);
   const [selectedLocation, setSelectedLocation] = useState(null);
-  const [loading, setLoading] = useState(true); // Track loading state
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -33,15 +32,15 @@ const MapWithWebSocket = () => {
         const response = await axios.get("http://localhost:8080/get-form-data");
         const data = response.data;
         setLocationData(data);
+        console.log(data);
 
-        // Set map center to the first location if available
         if (data && data.length > 0) {
           setMapCenter([data[0].latitude, data[0].longitude]);
         }
       } catch (error) {
         console.error("Error fetching location data:", error);
       } finally {
-        setLoading(false); // Set loading to false whether fetch succeeded or failed
+        setLoading(false);
       }
     };
 
@@ -54,7 +53,7 @@ const MapWithWebSocket = () => {
   };
 
   if (loading) {
-    return <CircularProgress />; // Show loading indicator while fetching data
+    return <CircularProgress />;
   }
 
   return (
@@ -63,7 +62,7 @@ const MapWithWebSocket = () => {
         <MapContainer center={mapCenter} zoom={zoomLevel} style={{ height: "400px", margin: "10px 0" }}>
           <TileLayer
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            crossOrigin="anonymous" // Allow cross-origin requests for the map tiles
+            crossOrigin="anonymous"
           />
           {locationData.map((location, index) => (
             <Marker
@@ -74,7 +73,7 @@ const MapWithWebSocket = () => {
           ))}
         </MapContainer>
       ) : (
-        <Typography>Not any Location.... Load the location first...</Typography>
+        <Typography>Not any Location.... Fill the location first...</Typography>
       )}
 
       <Modal
@@ -87,7 +86,7 @@ const MapWithWebSocket = () => {
           <Typography id="modal-title" variant="h6" component="h2">
             Travel Log Details
           </Typography>
-          {selectedLocation && <MapData locationData={selectedLocation} />}
+          {selectedLocation && <ListInfoMap locationData={selectedLocation} />}
           <Button onClick={() => setOpenModal(false)} color="error" variant="contained" sx={{ mt: 2 }}>
             Close
           </Button>

@@ -545,7 +545,7 @@ func isInvalidFloat(value float64) bool {
 func handleUserPoleImage(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Query to select the latest pole image URL and multiple images URLs from the database
-		query := `SELECT poleimage, multipleimages FROM userform ORDER BY created_at DESC LIMIT 1`
+		query := `SELECT poleimage, multipleimages FROM userform`
 		row := db.QueryRow(query)
 
 		var poleImage string
