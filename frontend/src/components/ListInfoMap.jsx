@@ -24,7 +24,7 @@ import {
   SimpleGrid,
   useMantineTheme,
 } from "@mantine/core";
-import axios from "axios";
+
 
 const ListInfoMap = ({ locationData }) => {
   const headers = [
@@ -41,9 +41,6 @@ const ListInfoMap = ({ locationData }) => {
   const [selectedImage, setSelectedImage] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  const handleOpenModal = () => {
-    setOpenModal(true);
-  };
 
   const handleCloseModal = () => {
     setOpenModal(false);

@@ -3,13 +3,19 @@ import axios from "axios";
 import "leaflet/dist/leaflet.css";
 import { MapContainer, TileLayer, Marker } from "react-leaflet";
 import L from "leaflet";
-import { Modal, Box, Typography, CircularProgress, Button } from "@mui/material";
+import {
+  Modal,
+  Box,
+  Typography,
+  CircularProgress,
+  Button,
+} from "@mui/material";
 import ListInfoMap from "./ListInfoMap"; // Adjust import path as necessary
 
 // Fix for Leaflet's default marker icon
-import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
-import markerIcon from 'leaflet/dist/images/marker-icon.png';
-import markerShadow from 'leaflet/dist/images/marker-shadow.png';
+import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
+import markerIcon from "leaflet/dist/images/marker-icon.png";
+import markerShadow from "leaflet/dist/images/marker-shadow.png";
 
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -59,7 +65,11 @@ const MapWithWebSocket = () => {
   return (
     <div>
       {locationData && locationData.length > 0 ? (
-        <MapContainer center={mapCenter} zoom={zoomLevel} style={{ height: "400px", margin: "10px 0" }}>
+        <MapContainer
+          center={mapCenter}
+          zoom={zoomLevel}
+          style={{ height: "400px", margin: "10px 0" }}
+        >
           <TileLayer
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             crossOrigin="anonymous"
@@ -73,8 +83,46 @@ const MapWithWebSocket = () => {
           ))}
         </MapContainer>
       ) : (
-        <Typography>Not any Location.... Fill the location first...</Typography>
+        
+        <Typography variant="h6" color="error" sx={{mt: 2, pl:5 }} justifyContent="center" > Please insert the Data First... </Typography>
+
       )}
+
+    {/* can we display this when there is not any data, please insert the data first inside the modal */}
+        
+          {/* <Modal
+            open={openModal}
+            onClose={() => setOpenModal(false)}
+            aria-labelledby="modal-title"
+            aria-describedby="modal-description"
+          >
+            <Box
+              sx={{
+                position: "absolute",
+                top: "50%",
+                left: "50%",
+                transform: "translate(-50%, -50%)",
+                width: 400,
+                bgcolor: "background.paper",
+                boxShadow: 24,
+                p: 4,
+              }}
+            >
+              <Typography id="modal-title" variant="h6" component="h2">
+                Please insert some data first....
+              </Typography>
+              <Button
+                onClick={() => setOpenModal(false)}
+                color="error"
+                variant="contained"
+                sx={{ mt: 2 }}
+              >
+                Close
+              </Button>
+            </Box>
+          </Modal> */}
+        
+      
 
       <Modal
         open={openModal}
@@ -82,12 +130,28 @@ const MapWithWebSocket = () => {
         aria-labelledby="modal-title"
         aria-describedby="modal-description"
       >
-        <Box sx={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: 400, bgcolor: 'background.paper', boxShadow: 24, p: 4 }}>
+        <Box
+          sx={{
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            width: 400,
+            bgcolor: "background.paper",
+            boxShadow: 24,
+            p: 4,
+          }}
+        >
           <Typography id="modal-title" variant="h6" component="h2">
             Travel Log Details
           </Typography>
           {selectedLocation && <ListInfoMap locationData={selectedLocation} />}
-          <Button onClick={() => setOpenModal(false)} color="error" variant="contained" sx={{ mt: 2 }}>
+          <Button
+            onClick={() => setOpenModal(false)}
+            color="error"
+            variant="contained"
+            sx={{ mt: 2 }}
+          >
             Close
           </Button>
         </Box>
