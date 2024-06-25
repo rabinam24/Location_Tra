@@ -266,8 +266,6 @@ function NewLanding() {
 
               {showAddTravelLogButton && <Form />}
 
-            
-              <ImageGallery />
             </>
           )}
         </Grid>

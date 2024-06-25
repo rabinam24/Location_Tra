@@ -1,0 +1,32 @@
+KEYS:
+subnet                register the cluster to MinIO SUBNET
+callhome              enable callhome to MinIO SUBNET
+drive                 enable drive specific settings
+site                  label the server and its location
+api                   manage global HTTP API call specific features, such as throttling, authentication types, etc.
+scanner               manage namespace scanning for usage calculation, lifecycle, healing and more
+batch                 manage batch job workers and wait times
+compression           enable server side compression of objects
+identity_openid       enable OpenID SSO support
+identity_ldap         enable LDAP SSO support
+identity_tls          enable X.509 TLS certificate SSO support
+identity_plugin       enable Identity Plugin via external hook
+policy_plugin         enable Access Management Plugin for policy enforcement
+logger_webhook        send server logs to webhook endpoints
+audit_webhook         send audit logs to webhook endpoints
+audit_kafka           send audit logs to kafka endpoints
+notify_webhook        publish bucket notifications to webhook endpoints
+notify_amqp           publish bucket notifications to AMQP endpoints
+notify_kafka          publish bucket notifications to Kafka endpoints
+notify_mqtt           publish bucket notifications to MQTT endpoints
+notify_nats           publish bucket notifications to NATS endpoints
+notify_nsq            publish bucket notifications to NSQ endpoints
+notify_mysql          publish bucket notifications to MySQL databases
+notify_postgres       publish bucket notifications to Postgres databases
+notify_elasticsearch  publish bucket notifications to Elasticsearch endpoints
+notify_redis          publish bucket notifications to Redis datastores
+lambda_webhook        manage remote lambda functions
+etcd                  persist IAM assets externally to etcd
+cache                 enable cache plugin on MinIO for GET/HEAD requests
+browser               manage Browser HTTP specific features, such as Security headers, etc.
+ilm                   manage ILM settings for expiration and transition workers

@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math"
 	"net/http"
 	"os"
 	"strconv"
@@ -49,8 +50,9 @@ type StartEnd struct {
 }
 
 type GPSData struct {
-	Date     time.Time `json:"date"`
-	Distance float64   `json:"distance"`
+	ID        int
+	Latitude  float64
+	Longitude float64
 }
 
 var upgrader = websocket.Upgrader{
@@ -402,69 +404,89 @@ func handleUserData(db *sql.DB) http.HandlerFunc {
 
 func handleTotalDistance(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// we need the distance of last 4 days, we need to calculate the distance
-		// we need to use the gps distance of the each day and calculate the distance
+		// Query to fetch all GPS data ordered by ID
+		query := `SELECT id, latitude, longitude FROM userform ORDER BY id`
 
-		// calculate the date range for last 4 days
-		endDate := time.Now().UTC().Truncate(24 * time.Hour)
-		startDate := endDate.AddDate(0, 0, -3)
-
-		// Query to fetch the gpsdata from last 4 days
-
-		query := `SELECT date,distance FROM gps_data WHERE data >=$1 and date<=$2`
-
-		rows, err := db.Query(query, startDate, endDate)
+		rows, err := db.Query(query)
 		if err != nil {
-			log.Printf("Error scanning rows %v", err)
-			http.Error(w, "Error scanning rows", http.StatusInternalServerError)
+			log.Printf("Error querying rows: %v", err)
+			http.Error(w, "Error querying rows", http.StatusInternalServerError)
 			return
 		}
 		defer rows.Close()
 
 		var totalDistance float64
+		var previousData *GPSData
 
 		// Iterate through the rows and calculate the total distance
 		for rows.Next() {
-
 			var gpsData GPSData
-			err := rows.Scan(&gpsData.Date, &gpsData.Distance)
+			err := rows.Scan(&gpsData.ID, &gpsData.Latitude, &gpsData.Longitude)
 			if err != nil {
 				log.Printf("Error scanning rows: %v", err)
 				http.Error(w, "Error scanning rows", http.StatusInternalServerError)
 				return
 			}
-			totalDistance += gpsData.Distance
+
+			if previousData != nil {
+				// Calculate the distance between previousData and gpsData
+				totalDistance += calculateDistance(previousData.Latitude, previousData.Longitude, gpsData.Latitude, gpsData.Longitude)
+			}
+			previousData = &gpsData
 		}
-		//check if there's any  error in the row iterations
+
+		// Check if there's any error in the row iterations
+		type GPSData struct {
+			Date     time.Time `json:"date"`
+			Distance float64   `json:"distance"`
+		}
+
 		if err := rows.Err(); err != nil {
 			log.Printf("Error iterating over rows: %v", err)
 			http.Error(w, "Error iterating over rows", http.StatusInternalServerError)
 			return
 		}
 
-		//preparing the json response
-
+		// Prepare the JSON response
 		response := struct {
 			TotalDistance float64 `json:"total_distance"`
 		}{
 			TotalDistance: totalDistance,
 		}
 
-		// convert the response to json
-
+		// Convert the response to JSON
 		jsonResponse, err := json.Marshal(response)
 		if err != nil {
-			log.Printf("Error marshalling Json: %v", err)
-			http.Error(w, "Error creating Json response", http.StatusInternalServerError)
+			log.Printf("Error marshalling JSON: %v", err)
+			http.Error(w, "Error creating JSON response", http.StatusInternalServerError)
 			return
 		}
-		// set content-type header and write response
+
+		// Set content-type header and write response
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		w.Write(jsonResponse)
-
 	}
+}
 
+func calculateDistance(lat1, lon1, lat2, lon2 float64) float64 {
+	const EarthRadius = 6371 // Earth's radius in kilometers
+
+	// Convert latitude and longitude from degrees to radians
+	lat1 = lat1 * math.Pi / 180
+	lat2 = lat2 * math.Pi / 180
+	lon1 = lon1 * math.Pi / 180
+	lon2 = lon2 * math.Pi / 180
+
+	// Haversine formula
+	deltaLat := lat2 - lat1
+	deltaLon := lon2 - lon1
+
+	a := math.Sin(deltaLat/2)*math.Sin(deltaLat/2) +
+		math.Cos(lat1)*math.Cos(lat2)*math.Sin(deltaLon/2)*math.Sin(deltaLon/2)
+	c := 2 * math.Atan2(math.Sqrt(a), math.Sqrt(1-a))
+
+	return EarthRadius * c
 }
 
 func handleGetFormData(db *sql.DB) http.HandlerFunc {
@@ -519,14 +541,17 @@ func isInvalidFloat(value float64) bool {
 	return value != value // NaN check
 }
 
-// i Wanna fetch  the latest image save in the database and I wanna to display it in the frontend ///
+// i Wanna fetch  the latest image save in the database and I wanna to display it in the frontend ///// handleUserPoleImage handles the retrieval of the latest pole image and multiple images from the database
 func handleUserPoleImage(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Query to select the latest pole image URL and multiple images URLs from the database
-		query := `SELECT poleimage, multipleimages FROM userform ORDER BY created_at DESC LIMIT 1`
+		query := `SELECT poleimage, multipleimages FROM userform`
 		row := db.QueryRow(query)
+
 		var poleImage string
 		var multipleImagesJSON sql.NullString // Use sql.NullString to handle NULL values
+
+		// Scan the result into poleImage and multipleImagesJSON variables
 		err := row.Scan(&poleImage, &multipleImagesJSON)
 		if err != nil {
 			if err == sql.ErrNoRows {
@@ -539,10 +564,13 @@ func handleUserPoleImage(db *sql.DB) http.HandlerFunc {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+
 		// Prepare response data
 		response := map[string]interface{}{
 			"poleImage": poleImage,
 		}
+
+		// Handle multiple images if the JSON string is valid
 		if multipleImagesJSON.Valid && multipleImagesJSON.String != "" {
 			var multipleImages []string
 			if err := json.Unmarshal([]byte(multipleImagesJSON.String), &multipleImages); err != nil {
@@ -554,6 +582,7 @@ func handleUserPoleImage(db *sql.DB) http.HandlerFunc {
 		} else {
 			response["multipleImages"] = []string{}
 		}
+
 		// Send the image URLs to the frontend
 		w.Header().Set("Content-Type", "application/json")
 		if err := json.NewEncoder(w).Encode(response); err != nil {
@@ -704,6 +733,7 @@ func main() {
 	http.HandleFunc("/start-trip", handleStartTrip(db))
 	http.HandleFunc("/end-trip", handleEndTrip(db))
 	http.HandleFunc("/get-form-data", handleGetFormData(db))
+	http.HandleFunc("/total-distance", handleTotalDistance(db))
 
 	// CORS middleware
 	corsMiddleware := func(next http.Handler) http.Handler {

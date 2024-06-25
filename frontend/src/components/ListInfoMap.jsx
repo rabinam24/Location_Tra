@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   Table,
   TableBody,
@@ -8,12 +8,23 @@ import {
   TableRow,
   Paper,
   Typography,
-  Grid,
   useMediaQuery,
   Box,
+  Modal,
+  Button,
+  Card,
+  Grid,
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
-import { Container, Text, Paper as MantinePaper, SimpleGrid, useMantineTheme } from "@mantine/core";
+import { Skeleton } from "@mantine/core";
+import {
+  Container,
+  Text,
+  Paper as MantinePaper,
+  SimpleGrid,
+  useMantineTheme,
+} from "@mantine/core";
+
 
 const ListInfoMap = ({ locationData }) => {
   const headers = [
@@ -23,7 +34,23 @@ const ListInfoMap = ({ locationData }) => {
     "Description",
     "Available ISP",
     "ISP",
+    "Document",
   ];
+
+  const [openModal, setOpenModal] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+
+  const handleCloseModal = () => {
+    setOpenModal(false);
+    setSelectedImage(null);
+  };
+
+  const handleUserDataClick = () => {
+    setOpenModal(true);
+    setLoading(false);
+  };
 
   const renderCellContent = (info, header) => {
     switch (header) {
@@ -39,6 +66,19 @@ const ListInfoMap = ({ locationData }) => {
         return info.availableisp;
       case "ISP":
         return info.selectisp;
+      case "Document":
+        return (
+          <Typography
+            sx={{
+              cursor: "pointer",
+              color: "blue",
+              textDecoration: "underline",
+            }}
+            onClick={handleUserDataClick}
+          >
+            Pole Image
+          </Typography>
+        );
       default:
         return null;
     }
@@ -51,7 +91,11 @@ const ListInfoMap = ({ locationData }) => {
   return (
     <Container size="lg" px="xs">
       {isMobile ? (
-        <SimpleGrid cols={1} spacing="xs" breakpoints={[{ maxWidth: 'sm', cols: 1 }]}>
+        <SimpleGrid
+          cols={1}
+          spacing="xs"
+          breakpoints={[{ maxWidth: "sm", cols: 1 }]}
+        >
           {headers.map((header) => (
             <MantinePaper
               key={header}
@@ -64,7 +108,10 @@ const ListInfoMap = ({ locationData }) => {
               <Text
                 weight={700}
                 size="sm"
-                style={{ color: mantineTheme.colors.blue[7], marginBottom: mantineTheme.spacing.xs }}
+                style={{
+                  color: mantineTheme.colors.blue[7],
+                  marginBottom: mantineTheme.spacing.xs,
+                }}
               >
                 {header}
               </Text>
@@ -77,7 +124,11 @@ const ListInfoMap = ({ locationData }) => {
       ) : (
         <TableContainer
           component={Paper}
-          sx={{ border: 1, borderColor: "divider", backgroundColor: theme.palette.background.paper }}
+          sx={{
+            border: 1,
+            borderColor: "divider",
+            backgroundColor: theme.palette.background.paper,
+          }}
         >
           <Table sx={{ minWidth: 650, borderCollapse: "collapse" }}>
             <TableHead>
@@ -100,7 +151,9 @@ const ListInfoMap = ({ locationData }) => {
               </TableRow>
             </TableHead>
             <TableBody>
-              <TableRow sx={{ "&:last-child td, &:last-child th": { border: 0 } }}>
+              <TableRow
+                sx={{ "&:last-child td, &:last-child th": { border: 0 } }}
+              >
                 {headers.map((header) => (
                   <TableCell
                     key={header}
@@ -117,6 +170,63 @@ const ListInfoMap = ({ locationData }) => {
           </Table>
         </TableContainer>
       )}
+
+      <Modal
+        open={openModal}
+        onClose={handleCloseModal}
+        aria-labelledby="modal-title"
+        aria-describedby="modal-description"
+      >
+        <Box
+          sx={{
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            width: "90%",
+            maxWidth: "600px",
+            bgcolor: "background.paper",
+            boxShadow: 24,
+            p: 4,
+            borderRadius: 2,
+          }}
+        >
+          {loading ? (
+            <Skeleton variant="rectangular" width="100%" height={300} />
+          ) : (
+            <Grid container spacing={2}>
+              <Grid item xs={12}>
+                <Card>
+                  <img
+                    src={locationData.poleimage_url}
+                    alt="Pole"
+                    style={{ width: "100%", height: "auto" }}
+                  />
+                </Card>
+              </Grid>
+              {locationData.multipleimages_urls.map((imageUrl, index) => (
+                <Grid item xs={12} sm={6} key={index}>
+                  <Card>
+                    <img
+                      src={imageUrl}
+                      alt={`Location ${index}`}
+                      style={{ width: "100%", height: "auto" }}
+                    />
+                  </Card>
+                </Grid>
+              ))}
+            </Grid>
+          )}
+          <Button
+            onClick={handleCloseModal}
+            color="error"
+            variant="contained"
+            sx={{ mt: 2 }}
+          >
+            Close
+          </Button>
+        </Box>
+      </Modal>
     </Container>
   );
 };
