@@ -90,7 +90,36 @@ class TravelLogDocument(db.Model):
     document_path = db.Column(db.String(200), nullable=False)
     document_name = db.Column(db.String(100), nullable=False)
 
+def basic_auth_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        auth = request.authorization
+        if not auth or not (auth.username == 'admin' and auth.password == 'password'):
+            return jsonify({"message": "Authentication required"}), 401
+        return f(*args, **kwargs)
+    return decorated
 
+@app.route('/protected')
+@basic_auth_required
+def protected():
+    return jsonify({"message": "You have access to the protected route"})
+
+@app.route('/restricted')
+@jwt_required()
+def restricted():
+    current_user = get_jwt_identity()
+    return jsonify(logged_in_as=current_user), 200
+
+@app.route('/login', methods=['POST'])
+def login():
+    username = request.json.get('username', None)
+    password = request.json.get('password', None)
+
+    if username != 'admin' or password != 'password':
+        return jsonify({"msg": "Bad username or password"}), 401
+
+    access_token = create_access_token(identity=username)
+    return jsonify(access_token=access_token), 200
 
 
 
