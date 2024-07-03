@@ -651,9 +651,14 @@ def update_trip(trip_id):
 @app.route('/trips/<int:trip_id>', methods=['DELETE'])
 def delete_trip(trip_id):
     trip = trips.get(trip_id) #the trip refers  to particualar trip to delete..actually to be queried from the database
-    del trips[trip] # logic to delete a trip
-    return jsonify({'message': 'Trip deleted successfully!'})
-
+    # del trips[trip] # logic to delete a trip
+    try:
+        trips.pop(trip_id)
+    except Exception as e:
+        return jsonify({'message':f'no such trip=> {e}'})
+    # if trip is None:
+    #     return jsonify({'error':'no trip'})
+    return jsonify({'message': f'Trip with ID: {trip_id} deleted successfully!'})
 
 # Read Route for all trips (reading list of trips)
 @app.route('/trips', methods=['GET'])
