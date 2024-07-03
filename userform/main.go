@@ -616,7 +616,7 @@ func handleDeleteData(db *sql.DB) http.HandlerFunc {
 
 func handlegetGpsData(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		rows, err := db.Query("SELECT id, latitude, longitude FROM gps_data")
+		rows, err := db.Query("SELECT id, latitude, longitude FROM userform")
 		if err != nil {
 			log.Printf("Error querying gps_data: %v", err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
