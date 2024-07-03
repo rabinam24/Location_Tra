@@ -94,15 +94,22 @@ def basic_auth_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         auth = request.authorization
-        if not auth or not (auth.username == 'admin' and auth.password == 'password'):
+        if not auth:
             return jsonify({"message": "Authentication required"}), 401
+        return f(*args, **kwargs, auth=auth)
+        # if not auth or not (auth.username == 'admin' and auth.password == 'password'):
+        #     return jsonify({"message": "Authentication required"}), 401
         return f(*args, **kwargs)
     return decorated
 
 @app.route('/protected')
 @basic_auth_required
-def protected():
-    return jsonify({"message": "You have access to the protected route"})
+def protected(auth):
+    return jsonify({
+        "message": "You have access to the protected route",
+        "username": auth.username,
+        "password": auth.password
+    })
 
 @app.route('/restricted')
 @jwt_required()
@@ -592,20 +599,53 @@ def get_trip(trip_id):
         return jsonify({'error': 'Not Found', 'message': 'Trip not found'}), 404
     return jsonify(trip)
 
+# # Update Route for a particular trip
+# @app.route('/trips/<int:trip_id>', methods=['PUT'])
+# def update_trip(trip_id):
+#     trip = trips.get(trip_id) #query from the database
+#     if trip is None:
+#         # return jsonify({'error': 'Trip not found'}), 404
+#         try:
+#             data = request.get_json(force=True)
+#             trip.username = data['username']
+#             trip.start_at = datetime.strptime(data['start_at'], '%Y-%m-%d %H:%M:%S')
+#             trip.from_gps = data['from_gps']
+#             trip.end_at = datetime.strptime(data['end_at'], '%Y-%m-%d %H:%M:%S')
+#             trip.distance = data['distance']
+#         except Exception as e:
+#             return jsonify({'error': f'Invalid JSON provided caught an exception {e}'}), 400
+
+    #     return jsonify({
+    #     'message': f'Trip updated successfully! with username: {trip.username}, starttime: {trip.start_at}'
+    # }), 200
+
 # Update Route for a particular trip
 @app.route('/trips/<int:trip_id>', methods=['PUT'])
 def update_trip(trip_id):
-    trip = trips.get(trip_id) #query from the database
-    data = request.get_json()
-    
-    trip.username = data['username']
-    trip.start_at = datetime.strptime(data['start_at'], '%Y-%m-%d %H:%M:%S')
-    trip.from_gps = data['from_gps']
-    trip.end_at = datetime.strptime(data['end_at'], '%Y-%m-%d %H:%M:%S')
-    trip.distance = data['distance']
+    trip = trips.get(trip_id)  # Query from the database
+    if trip is None:
+        trip = {}  # Create a new trip (you might want to use a proper Trip class or structure)
 
-    return jsonify({'message': 'Trip updated successfully!'})
+    try:
+        data = request.get_json(force=True)
+        trip['username'] = data['username']
+        trip['start_at'] = datetime.strptime(data['start_at'], '%Y-%m-%d %H:%M:%S')
+        trip['from_gps'] = data['from_gps']
+        trip['end_at'] = datetime.strptime(data['end_at'], '%Y-%m-%d %H:%M:%S')
+        trip['distance'] = data['distance']
 
+        # Save the new trip to the trips dictionary
+        trips[trip_id] = trip
+    except KeyError as e:
+        return jsonify({'error': f'Missing key in JSON data: {e}'}), 400
+    except ValueError as e:
+        return jsonify({'error': f'Invalid data format: {e}'}), 400
+    except Exception as e:
+        return jsonify({'error': f'An unexpected error occurred: {e}'}), 500
+
+    return jsonify({
+        'message': f'Trip updated successfully! with username: {trip["username"]}, starttime: {trip["start_at"]}'
+    }), 200
 
 # Delete Route for a particular trip
 @app.route('/trips/<int:trip_id>', methods=['DELETE'])
