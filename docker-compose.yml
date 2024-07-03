@@ -19,6 +19,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - app-network
+    restart: always
 
   minio-server:
     image: minio/minio
@@ -63,6 +64,8 @@ services:
         condition: service_healthy
     networks:
       - app-network
+    volumes:
+      - ./:/app
 
   frontend:
     build:
@@ -72,6 +75,8 @@ services:
       - "3000:80"
     networks:
       - app-network
+    volumes:
+      - ./frontend:/app
 
 volumes:
   minio_data:
