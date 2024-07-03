@@ -90,7 +90,36 @@ class TravelLogDocument(db.Model):
     document_path = db.Column(db.String(200), nullable=False)
     document_name = db.Column(db.String(100), nullable=False)
 
+def basic_auth_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        auth = request.authorization
+        if not auth or not (auth.username == 'admin' and auth.password == 'password'):
+            return jsonify({"message": "Authentication required"}), 401
+        return f(*args, **kwargs)
+    return decorated
 
+@app.route('/protected')
+@basic_auth_required
+def protected():
+    return jsonify({"message": "You have access to the protected route"})
+
+@app.route('/restricted')
+@jwt_required()
+def restricted():
+    current_user = get_jwt_identity()
+    return jsonify(logged_in_as=current_user), 200
+
+@app.route('/login', methods=['POST'])
+def login():
+    username = request.json.get('username', None)
+    password = request.json.get('password', None)
+
+    if username != 'admin' or password != 'password':
+        return jsonify({"msg": "Bad username or password"}), 401
+
+    access_token = create_access_token(identity=username)
+    return jsonify(access_token=access_token), 200
 
 
 
@@ -527,22 +556,29 @@ def start_trip():
     print(start_time_formatted)
     print(f"started : True, startTime: {start_time_formatted}")
     data = request.json
-    if not data or 'trip_id' not in data or 'user_id' not in data or 'start_location' not in data:
+    if not data or 'trip_id' not in data or 'user_id' not in data or 'start_at' not in data or 'username' not in data or 'from_gps_x' not in data or 'from_gps_y' not in data:
         return jsonify({'error': 'Bad Request', 'message': 'Trip ID, User ID, and Start Location are required'}), 400
 
     trip_id = data['trip_id']
     user_id = data['user_id']
-    start_location = data['start_location']
+    start_location = data['start_at'] #startlocation in words
     
     if trip_id in trips:
         return jsonify({'error': 'Conflict', 'message': 'Trip already started'}), 409
 
+    # trips data with username, user_id values to be inserted into the database
     trips[trip_id] = {
         'user_id': user_id,
-        'start_location': start_location,
+        'username': data['username'],
+        'start_at': start_location,
+        'from_gps_x':27, # latitude fetched from react frontend say 27
+        'from_gps_y':82, # longitude longitude fetched from react frontend say 82
         'start_time': data.get('start_time'),
-        'status': 'ongoing'
-    } # mock trip data before inserting into the database..Database already created
+        'distance':0,
+        'status': 'ongoing' # 'status':ongoing or status:started at starttrip and status:'ended' at endtrip
+    }
+    # trips['from_gps'] and  trips['distance']: 0 at 
+    # mock trip data before inserting into the database..Database already created
     # this thips[trip_id] data need to be inserted into the database
 
     # return jsonify({'message': 'Trip started successfully', 'trip': trips[trip_id]}), 201
@@ -598,13 +634,22 @@ def trip_started_required(func):
 @app.route('/end_trip', methods=['POST'])
 @trip_started_required
 def end_trip():
+    end_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     data = request.json
     
-    if not data or 'trip_id' not in data or 'end_location' not in data:
+    if not data or 'trip_id' not in data or 'end_at' not in data or 'distance' not in data:
         return jsonify({'error': 'Bad Request', 'message': 'Trip ID and End Location are required'}), 400
-
+    
     trip_id = data['trip_id']
-    end_location = data['end_location']
+    end_at = data['end_at']
+    distance = data['distance']
+
+    trip_data = trips[trip_id]
+    trip_data['end_at'] = end_at
+    trip_data['end_time'] = end_time
+    trip_data['distance'] = distance
+    trip_data['status'] = 'completed'
+
     
     if trip_id not in trips:
         return jsonify({'error': 'Not Found', 'message': 'Trip not found'}), 404
@@ -612,7 +657,7 @@ def end_trip():
     if trips[trip_id]['status'] == 'ended':
         return jsonify({'error': 'Conflict', 'message': 'Trip already ended'}), 409
 
-    trips[trip_id]['end_location'] = end_location
+    trips[trip_id]['end_at'] = end_at
     trips[trip_id]['end_time'] = data.get('end_time')  # or trips[trip_id]['end_time'] = datetime.now()
     trips[trip_id]['status'] = 'ended'
     # these data trips[trip_id]['end_location'], trips[trip_id]['end_location'], trips[trip_id]['status'] = 'ended' need to be inserted into the database
