@@ -88,42 +88,6 @@ const MapWithWebSocket = () => {
 
       )}
 
-    {/* can we display this when there is not any data, please insert the data first inside the modal */}
-        
-          {/* <Modal
-            open={openModal}
-            onClose={() => setOpenModal(false)}
-            aria-labelledby="modal-title"
-            aria-describedby="modal-description"
-          >
-            <Box
-              sx={{
-                position: "absolute",
-                top: "50%",
-                left: "50%",
-                transform: "translate(-50%, -50%)",
-                width: 400,
-                bgcolor: "background.paper",
-                boxShadow: 24,
-                p: 4,
-              }}
-            >
-              <Typography id="modal-title" variant="h6" component="h2">
-                Please insert some data first....
-              </Typography>
-              <Button
-                onClick={() => setOpenModal(false)}
-                color="error"
-                variant="contained"
-                sx={{ mt: 2 }}
-              >
-                Close
-              </Button>
-            </Box>
-          </Modal> */}
-        
-      
-
       <Modal
         open={openModal}
         onClose={() => setOpenModal(false)}

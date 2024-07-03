@@ -41,6 +41,7 @@ const Form = () => {
   const [successMessage, setSuccessMessage] = useState("");
   const [showUserData, setShowUserData] = useState(false);
 
+
   useEffect(() => {
     navigator.geolocation.getCurrentPosition(
       (position) => {
@@ -317,6 +318,7 @@ const Form = () => {
             type="file"
             name="poleimage"
             accept="image/*"
+            // value={userInfo.poleimage}
             onChange={handleChange}
             style={{ margin: "8px 0" }}
           />

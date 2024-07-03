@@ -1,11 +1,18 @@
 # from flask import Flask
+<<<<<<< HEAD
 from flask import Blueprint
+=======
+>>>>>>> origin
 import base64
 from PIL import Image
 # from collections import OrderedDict
 from collections import OrderedDict
+<<<<<<< HEAD
 import secrets
 from flask_jwt_extended import JWTManager,jwt_required,create_access_token,get_jwt_identity
+=======
+
+>>>>>>> origin
 from flask import Flask, request, jsonify
 from datetime import datetime
 
@@ -13,6 +20,12 @@ from flask_cors import CORS
 # from models import UserForm, db
 
 from wtforms import Form,StringField,FloatField,FileField
+<<<<<<< HEAD
+=======
+
+from werkzeug.utils import secure_filename
+import os
+>>>>>>> origin
 
 from werkzeug.utils import secure_filename
 import os
@@ -143,11 +156,15 @@ jwt_secret_key = secrets.token_hex(16)
 app.config['JWT_SECRET_KEY'] = jwt_secret_key
 jwt = JWTManager(app)
 CORS(app)  # Enable CORS for all routes
+<<<<<<< HEAD
 # Mock Database
 userData = {
     'id':1 ,# MockData primary key id
     'location':'nepalgunj'
 }
+=======
+# CORS(app, origins='http://localhost:5173')  # Allow requests only from http://localhost:5173
+>>>>>>> origin
 
 # CORS(app, origins='http://localhost:5173')  # Allow requests only from http://localhost:5173
 # import sqlite3
@@ -163,6 +180,10 @@ logger = logging.getLogger()
 from flask import send_file,send_from_directory
 from werkzeug.utils import safe_join
 
+
+from flask import send_file,send_from_directory
+from werkzeug.utils import safe_join
+
 class submitForm(Form):
     form_location = StringField('Location')
     form_latitude = FloatField('Latitude')
@@ -172,6 +193,10 @@ class submitForm(Form):
     form_selectlocation = StringField('SelectPoleLocation')
     form_description = StringField('Description')
     form_poleimage = FileField('selectpoleimage')
+<<<<<<< HEAD
+=======
+
+>>>>>>> origin
 
 # class Student(db.Model):
 #     roll = db.Column(db.Integer,primary_key=True)
@@ -210,10 +235,17 @@ def allowed_file(filename):
 
 # Configure database (replace with your configuration from config.py or environment variables)
 
+<<<<<<< HEAD
 # app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:acharya@localhost/test'
 # app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 # db.init_app(app)  # Initialize database
 # print("Database initialized successfully")
+=======
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:acharya@localhost/test'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db.init_app(app)  # Initialize database
+print("Database initialized successfully")
+>>>>>>> origin
 app.config['UPLOAD_FOLDER'] = 'uploads'
 
 # @app.route('/submit-user-form', methods=['POST'])
@@ -302,10 +334,13 @@ def submit_user_form():
         return data
    
     elif request.method == 'POST':
+<<<<<<< HEAD
         # if db.app is not None:
         #     return jsonify({"Message":"Database has been initialized."})
         # else:
         #     return({"message":"Database has not been initialized."})
+=======
+>>>>>>> origin
         form_data = request.form
         # form_data = request.json
         # files = request.files['poleimage']
@@ -316,7 +351,11 @@ def submit_user_form():
         print("Form Data:", form_data)
         # test1 = test_data2.get('location')
         # test2 = test_data2.get('gpslocation')
+<<<<<<< HEAD
         # Validate GPS location format
+=======
+         # Validate GPS location format
+>>>>>>> origin
         if gpslocation.count(',') != 1:
             return jsonify({"error": "GPS location must contain exactly two float values separated by a comma"}), 400
         print(location,gpslocation)
@@ -380,6 +419,7 @@ def submit_user_form():
             pass
         else:
             return jsonify({"error":"please enter only yes and no boolean values in availableisp"})
+<<<<<<< HEAD
         
         form_data_log = request.form.to_dict()
         file_data_log = request.files.to_dict()
@@ -417,6 +457,9 @@ def submit_user_form():
             elif availableisp.lower()=='no':
                 print("outside no")
                 logger.info(f"File received: {filename_log} FilenameReceived:{None if str(filename_log)=='ispimages' else file_log.filename}) (content type: {file_log.content_type})")
+=======
+                
+>>>>>>> origin
 
 
         # Save the uploaded files
@@ -463,7 +506,11 @@ def submit_user_form():
         print(type(longitude_float))
         with open(file_path,'rb') as image_file:
             encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
+<<<<<<< HEAD
             # print(encoded_string)
+=======
+            print(encoded_string)
+>>>>>>> origin
             # print(encoded_string)
         submit_location: str = location
         submit_latitude: float = latitude_float
@@ -493,6 +540,7 @@ def submit_user_form():
         if form_object.validate():
             print("form submission successful")
             print("yahoo!")
+<<<<<<< HEAD
             unordered_data = {"form_submission_success":True,"selectpole":selectpole,"selectpolestatus":selectpolestatus,"location":submit_data['location'],"latitude":submit_data['latitude'],"longitude":submit_data['longitude'],"description":description,"poleimage":str(encoded_string),"poleimagename":str(filename),"message": "Form data logged successfully"}
 
             # response_data = OrderedDict([
@@ -507,6 +555,9 @@ def submit_user_form():
             #     ("poleimagename", str(filename)),
             #     ("message":"Form data logged successfully")
             # ])
+=======
+            unordered_data = {"form_submission_success":True,"selectpole":selectpole,"selectpolestatus":selectpolestatus,"location":submit_data['location'],"latitude":submit_data['latitude'],"longitude":submit_data['longitude'],"description":description,"poleimage":str(encoded_string),"poleimagename":str(filename)}
+>>>>>>> origin
 
             response_data = OrderedDict([
                 ("form_submission_success", True),
@@ -518,6 +569,7 @@ def submit_user_form():
                 ("selectpolestatus", selectpolestatus),
                 ("poleimage", str(encoded_string)),
                 ("poleimagename", str(filename)),
+<<<<<<< HEAD
                 ("message", "Form data logged successfully")
             ])
             # Authentication Logic
@@ -527,6 +579,9 @@ def submit_user_form():
             else:
                 jsonify({"message":f"need to create data {location} in database"})
 
+=======
+            ])
+>>>>>>> origin
 
             # response_data_sorted = dict(sorted(response_data.items(), key=lambda item: item[0]))
 
@@ -546,8 +601,33 @@ def submit_user_form():
         # return jsonify({"location":f"{test1}","gpslocation":f"{test2}","description":"empty"})
         # return "hahahha"
 
+<<<<<<< HEAD
 # Example data structure to hold trip data
 trips = {}
+=======
+
+@app.route('/start_trip',methods=['POST'])
+def start_trip():
+     # Assuming the frontend sends the current user's name
+    # current_user = request.json.get('current_user')
+    # Get the current time as the trip start time
+    start_time = datetime.now()
+    print(start_time)
+    # Return the trip start time as a response
+    start_time_formatted = start_time.strftime('%Y-%m-%d %H:%M:%S')
+    print(start_time_formatted)
+    print(f"started : True, startTime: {start_time_formatted}")
+    return jsonify({'started': True, 'startTime': start_time_formatted})
+
+
+
+
+
+# @app.route('/static/<path:pathLocation>')
+# def serve_static(pathLocation):
+#     return send_file(f'buildStaticReactVite/{pathLocation}')
+
+>>>>>>> origin
 
 # CRUD Operations for TRIP
 # Create Route for a particular trip.. i.e Starting a trip
@@ -719,13 +799,20 @@ def end_trip():
 
 # print(app.url_map)
 if __name__ == '__main__':
+<<<<<<< HEAD
     # print("This must be either True or False",os.path.exists('dummy'))
+=======
+    print("This must be either True or False",os.path.exists('dummy'))
+>>>>>>> origin
     if not os.path.exists(app.config['UPLOAD_FOLDER']):
         os.makedirs(app.config['UPLOAD_FOLDER'])
     if not os.path.exists('dummy'):
         os.makedirs('dummy')
+<<<<<<< HEAD
     with app.app_context():
         db.create_all()
     # with app.app_context():
     #     randomize()
+=======
+>>>>>>> origin
     app.run(debug=True)
