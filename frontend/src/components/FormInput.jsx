@@ -29,7 +29,12 @@ const Form = () => {
     selectpolestatus: "",
     selectpolelocation: "",
     description: "",
+<<<<<<< HEAD
     poleimage: null,
+=======
+    // poleimage: null,
+    poleimage: "",
+>>>>>>> origin
     availableisp: "",
     selectisp: "",
     multipleimages: [],
@@ -41,6 +46,124 @@ const Form = () => {
   const [successMessage, setSuccessMessage] = useState("");
   const [showUserData, setShowUserData] = useState(false);
 
+<<<<<<< HEAD
+=======
+  const handleChange = (e) => {
+    const { name, value,files } = e.target;
+    //Custom Validation for GPS location
+
+    // setUserInfo((prevUserInfo) => ({
+    //   ...prevUserInfo,
+    //   [name]: value,
+    // }));
+    if (name === "poleimage") { // Check if the changed field is poleimage
+      setUserInfo((prevUserInfo) => ({
+        ...prevUserInfo,
+        poleimage: files[0], // Update poleimage with the selected file
+      }));
+    } else {
+      setUserInfo((prevUserInfo) => ({
+        ...prevUserInfo,
+        [name]: value,
+      }));
+    }
+  };
+
+  const handleSliderImages = (e) => {
+    if (e.target.files) {
+      setProducts({ ...products, slider_images: [...e.target.files] });
+    }
+    console.log("Update slider images", products);
+  };
+
+  // const handleSubmit = (e) => {
+  //   e.preventDefault();
+  //   const newInfo = { ...userInfo, id: new Date().getTime().toString() };
+  //   setAllInfo([...allInfo, newInfo]);
+  //   setUserInfo({
+  //     location: "",
+  //     gpslocation: "",
+  //     selectpool: "",
+  //     selectpoolstatus: "",
+  //     selectpoollocation: "",
+  //     description: "",
+  //     poolimage: "",
+  //     availableisp: "",
+  //     selectisp: "",
+  //     multipleimages: "",
+  //   });
+  //   console.log("submit", userInfo);
+  // };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    // Split the gpslocation value by comma
+    const gpsLocationValues = userInfo.gpslocation.split(",");
+    // Check if there are exactly two values after splitting
+    if (gpsLocationValues.length !== 2) {
+      // If the number of values is not two, show an alert
+      alert('Please enter GPS location values separated by a comma.');
+    return;
+    }
+
+    // Trim and parse the latitude and longitude values
+    const latitude = parseFloat(gpsLocationValues[0].trim());
+    const longitude = parseFloat(gpsLocationValues[1].trim());
+
+    // Check if both latitude and longitude are valid float values
+    if (isNaN(latitude) || isNaN(longitude)) {
+      // If any value is not a valid float value, show an alert
+      alert('Please enter valid latitude and longitude values separated by a comma.');
+      return;
+  }
+  
+  
+  // Check if latitude and longitude are within the specified range for Nepal
+  // Nepal's coordinate is : Latitude:26.3475° N to 30.4474° N , Longitude:80.0580° E to 88.2015° E 
+  if(latitude >= 26.3475 && latitude <= 30.4474 && longitude >= 80.0580 && longitude <= 88.2015)
+  {
+    try {
+      const formData  = new FormData();
+      Object.keys(userInfo).forEach((key) => {
+        formData.append(key, userInfo[key]);
+      });
+      for (const [key2, value2] of formData.entries()) {
+        console.log(`Key: ${key2}, Value: ${value2}`);
+      }
+      const response = await fetch('http://127.0.0.1:5000/submit-user-form', {
+        method: 'POST',// Send user input data
+        // headers: {
+        //   'Content-Type': 'application/json',
+        // },
+        body : formData,
+        // body: JSON.stringify(userInfo), // Send user input data
+      });
+      if (response.ok) {
+        // Handle successful submission (e.g., show a success message)
+        console.log('Form submitted successfully!');
+      } else {
+        // Handle errors (e.g., show an error message)
+        console.error('Error submitting form.');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+    }
+  }
+  else
+  {
+    // Show an alert if latitude or longitude is out of range for Nepal
+    alert('Latitude and longitude values are out of range for Nepal.\nFor Latitude:\nInsert values between:26.3475° N to 30.4474° N\nFor Longitude:\nInsert values between 80.0580° E to 88.2015° E'); 
+  }
+  
+  
+  };
+  
+
+
+
+  // Load data from localStorage on component mount
+>>>>>>> origin
   useEffect(() => {
     navigator.geolocation.getCurrentPosition(
       (position) => {
@@ -317,6 +440,7 @@ const Form = () => {
             type="file"
             name="poleimage"
             accept="image/*"
+            // value={userInfo.poleimage}
             onChange={handleChange}
             style={{ margin: "8px 0" }}
           />
