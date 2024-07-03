@@ -1,0 +1,12 @@
+{
+  "name": "location_tracker",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "concurrently \"npm run start-flask\" \"npm run start-react\"",
+    "start-react": "cd frontend && npm run dev",
+    "start-flask": "cd backend && .venv\\Scripts\\Activate && flask --app main run"
+  },
+  "dependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

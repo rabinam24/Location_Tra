@@ -28,9 +28,9 @@ import {
 
 const ListInfoMap = ({ locationData }) => {
   const headers = [
-    "Select Pole",
-    "Select Pole Status",
-    "Select Pole Location",
+    "Selected Pole",
+    "Selected Pole Status",
+    "Selected Pole Location",
     "Description",
     "Available ISP",
     "ISP",
@@ -54,11 +54,11 @@ const ListInfoMap = ({ locationData }) => {
 
   const renderCellContent = (info, header) => {
     switch (header) {
-      case "Select Pole":
+      case "Selected Pole":
         return info.selectpole;
-      case "Select Pole Status":
+      case "Selected Pole Status":
         return info.selectpolestatus;
-      case "Select Pole Location":
+      case "Selected Pole Location":
         return info.selectpolelocation;
       case "Description":
         return info.description;
