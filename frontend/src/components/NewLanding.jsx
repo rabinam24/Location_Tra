@@ -14,7 +14,6 @@ import ImageGallery from "./PoleImage";
 import axios from "axios"; // Import Axios
 import MapWithWebSocket from "./MapComponent";
 
-
 function NewLanding() {
   const [trip, setTrip] = useState({
     started: false,
@@ -23,6 +22,8 @@ function NewLanding() {
     id: null,
   });
   const [showAddTravelLogButton, setShowAddTravelLogButton] = useState(false);
+  const [ShowTravelLogDetails, setShowAddTravelLogDetails] = useState(false);
+  const [ShowUserMapDetails, setShowUserMapDetails] = useState(false);
   const [showUserData, setShowUserData] = useState(false);
   const intervalIdRef = useRef(null);
   const [openModal, setOpenModal] = useState(false);
@@ -35,10 +36,9 @@ function NewLanding() {
     };
   }, []);
 
-
   // Load trip state from localStorage
   useEffect(() => {
-    const savedTrip = JSON.parse(localStorage.getItem('trip'));
+    const savedTrip = JSON.parse(localStorage.getItem("trip"));
     if (savedTrip && savedTrip.started) {
       const elapsedTime = new Date() - new Date(savedTrip.startTime);
       setTrip({ ...savedTrip, elapsedTime });
@@ -46,10 +46,9 @@ function NewLanding() {
     }
   }, []);
 
-
   // Save trip state to localStorage
   useEffect(() => {
-    localStorage.setItem('trip', JSON.stringify(trip));
+    localStorage.setItem("trip", JSON.stringify(trip));
   }, [trip]);
 
   const handleStartClick = async () => {
@@ -62,53 +61,71 @@ function NewLanding() {
         startTime: new Date().toISOString(), // Example start time
       };
 
-      const response = await axios.post("http://localhost:8080/start-trip", requestData, {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+      const response = await axios.post(
+        "http://localhost:8080/start-trip",
+        requestData,
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
 
       if (response.status !== 200) {
         throw new Error("Failed to start the trip");
       }
 
       const currentTime = new Date();
-      setTrip({ started: true, startTime: currentTime, elapsedTime: 0, id: response.data.tripId });
+      setTrip({
+        started: true,
+        startTime: currentTime,
+        elapsedTime: 0,
+        id: response.data.tripId,
+      });
       setShowAddTravelLogButton(true);
       setShowUserData(false); // Hide user data when starting the trip
       setOpenModal(false);
     } catch (error) {
-      console.error('Error starting trip:', error.response ? error.response.data : error.message);
+      console.error(
+        "Error starting trip:",
+        error.response ? error.response.data : error.message
+      );
     }
   };
-
 
   const handleStopClick = async () => {
     const userId = 1; // Replace with actual user ID
 
     try {
-      const response = await axios.post("http://localhost:8080/end-trip", {
-        tripId: trip.id, // Accessing tripId from state
-        userId: userId, // Using userId defined in function
-        endTime: new Date().toISOString()
-      }, {
-        headers: {
-          'Content-Type': 'application/json'
+      const response = await axios.post(
+        "http://localhost:8080/end-trip",
+        {
+          tripId: trip.id, // Accessing tripId from state
+          userId: userId, // Using userId defined in function
+          endTime: new Date().toISOString(),
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
         }
-      });
+      );
 
       if (response.status !== 200) {
         throw new Error("Failed to end the trip");
       }
 
       setTrip({ started: false, startTime: null, elapsedTime: 0, id: null });
-      localStorage.removeItem('trip');
+      localStorage.removeItem("trip");
       if (intervalIdRef.current) {
         clearInterval(intervalIdRef.current);
       }
       setShowAddTravelLogButton(false);
     } catch (error) {
-      console.error('Error ending trip:', error.response ? error.response.data : error.message);
+      console.error(
+        "Error ending trip:",
+        error.response ? error.response.data : error.message
+      );
     }
   };
 
@@ -184,7 +201,6 @@ function NewLanding() {
                 </Grid>
               </Grid>
 
-
               <Dialog
                 open={openModal}
                 onClose={() => setOpenModal(false)}
@@ -208,7 +224,6 @@ function NewLanding() {
                   </Button>
                 </DialogActions>
               </Dialog>
-
             </>
           )}
 
@@ -224,7 +239,7 @@ function NewLanding() {
           {trip.started && (
             <>
               <h1 className="text-3xl"> Welcome Rabinam </h1>
-              <p className="text-xl" style={{ marginTop: "10px" }}>
+              <p className="text-xl" style={{ margin: "10px" }}>
                 Trip started at:{" "}
                 <span className="font-bold">
                   {trip.elapsedTime
@@ -253,6 +268,7 @@ function NewLanding() {
                       : "Show Travel Log"}
                   </Button>
                 </Grid>
+
                 <Grid item>
                   <Button
                     variant="contained"
@@ -262,10 +278,39 @@ function NewLanding() {
                     End Trip
                   </Button>
                 </Grid>
+
+                <Grid item>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    onClick={() =>
+                      setShowAddTravelLogDetails(!ShowTravelLogDetails)
+                    }
+                  >
+                    {ShowTravelLogDetails
+                      ? "Hide Travel Log Details"
+                      : "Show Travel Log Details"}
+                  </Button>
+                </Grid>
+
+                <Grid item>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    onClick={() =>
+                      setShowUserMapDetails(!ShowUserMapDetails)
+                    }
+                  >
+                    {ShowUserMapDetails
+                      ? "Hide User Map Details"
+                      : "Show User Map Details"}
+                  </Button>
+                </Grid>
               </Grid>
 
               {showAddTravelLogButton && <Form />}
-
+              {ShowTravelLogDetails && <Home />}
+              {ShowUserMapDetails && <MapWithWebSocket />}
             </>
           )}
         </Grid>

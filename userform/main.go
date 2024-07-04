@@ -472,7 +472,7 @@ func handleTotalDistance(db *sql.DB) http.HandlerFunc {
 func calculateDistance(lat1, lon1, lat2, lon2 float64) float64 {
 	const EarthRadius = 6371 // Earth's radius in kilometers
 
-	// Convert latitude and longitude from degrees to radians
+	// Convert latitude and longitude from degrees to radiansdddd
 	lat1 = lat1 * math.Pi / 180
 	lat2 = lat2 * math.Pi / 180
 	lon1 = lon1 * math.Pi / 180
