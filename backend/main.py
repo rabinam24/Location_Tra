@@ -674,7 +674,19 @@ def delete_trip(trip_id):
 # Read Route for all trips (reading list of trips)
 @app.route('/trips', methods=['GET'])
 def get_all_trips():
+    print("Read route for all trips")
+    print("types :",type(trips))
+    print("all trips")
+    print(trips)
     return jsonify(trips)
+    # try:
+    #     trips_list = list(trips.keys())
+    #     return jsonify({'trips': trips_list}), 200
+    #     # trips_list = list(trips.values())
+    #     # return jsonify({'trips': trips_list}), 200
+    # except Exception as e:
+    #     print(f"the error is {e}")
+    #     return jsonify({'error': 'Internal Server Error', 'message': str(e)}), 500
 
 # Decorator to check if a trip has started
 def trip_started_required(func):
