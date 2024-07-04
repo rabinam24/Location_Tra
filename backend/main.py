@@ -553,21 +553,22 @@ trips = {}
 # Create Route for a particular trip.. i.e Starting a trip
 @app.route('/start_trip',methods=['POST'])
 def start_trip():
+    print("Create operation for trip with id 19")
     # Assuming the frontend sends the current user's name
     # current_user = request.json.get('current_user')
     # Get the current time as the trip start time
     start_time = datetime.now()
-    print(start_time)
+    # print(start_time)
     # Return the trip start time as a response
     start_time_formatted = start_time.strftime('%Y-%m-%d %H:%M:%S')
-    print(start_time_formatted)
-    print(f"started : True, startTime: {start_time_formatted}")
+    # print(start_time_formatted)
+    # print(f"started : True, startTime: {start_time_formatted}")
     data = request.json
     if not data or 'trip_id' not in data or 'user_id' not in data or 'start_at' not in data or 'username' not in data or 'from_gps_x' not in data or 'from_gps_y' not in data:
         return jsonify({'error': 'Bad Request', 'message': 'Trip ID, User ID, and Start Location are required'}), 400
 
-    trip_id = data['trip_id']
-    user_id = data['user_id']
+    trip_id = int(data['trip_id'])
+    user_id = int(data['user_id'])
     start_location = data['start_at'] #startlocation in words
     
     if trip_id in trips:
@@ -584,6 +585,12 @@ def start_trip():
         'distance':0,
         'status': 'ongoing' # 'status':ongoing or status:started at starttrip and status:'ended' at endtrip
     }
+    try:
+        print("trip type : ",type(trips.get(trip_id)))
+        print("trip data contents")
+        print(trips.get(trip_id))
+    except Exception as e:
+        print(f"the error is {e}")    
     # trips['from_gps'] and  trips['distance']: 0 at 
     # mock trip data before inserting into the database..Database already created
     # this thips[trip_id] data need to be inserted into the database
@@ -594,7 +601,11 @@ def start_trip():
 # Read ROUTE for a particular trip
 @app.route('/trips/<int:trip_id>', methods=['GET'])
 def get_trip(trip_id):
+    print("read operation for trip with id 19")
     trip = trips.get(trip_id) #query from the database
+    print("type of trip : ",type(trip))
+    print("trip data contents of id 19")
+    print(trip)
     if not trip:
         return jsonify({'error': 'Not Found', 'message': 'Trip not found'}), 404
     return jsonify(trip)
