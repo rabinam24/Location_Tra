@@ -24,13 +24,13 @@ import {
   SimpleGrid,
   useMantineTheme,
 } from "@mantine/core";
-
+import axios from "axios";
 
 const ListInfoMap = ({ locationData }) => {
   const headers = [
-    "Selected Pole",
-    "Selected Pole Status",
-    "Selected Pole Location",
+    "Pole",
+    "Pole Status",
+    "Pole Location",
     "Description",
     "Available ISP",
     "ISP",
@@ -38,13 +38,11 @@ const ListInfoMap = ({ locationData }) => {
   ];
 
   const [openModal, setOpenModal] = useState(false);
-  const [selectedImage, setSelectedImage] = useState(null);
   const [loading, setLoading] = useState(false);
-
+  const [dateString, setDateString] = useState("");
 
   const handleCloseModal = () => {
     setOpenModal(false);
-    setSelectedImage(null);
   };
 
   const handleUserDataClick = () => {
@@ -52,13 +50,39 @@ const ListInfoMap = ({ locationData }) => {
     setLoading(false);
   };
 
+  const isToday = (someDate) => {
+    const today = new Date();
+    return (
+      someDate.getDate() === today.getDate() &&
+      someDate.getMonth() === today.getMonth() &&
+      someDate.getFullYear() === today.getFullYear()
+    );
+  };
+
+  const getMarkerColor = (dateString) => {
+    const dataDate = new Date(dateString);
+    return isToday(dataDate) ? "blue" : "red";
+  };
+
+  useEffect(() => {
+    const fetchDate = async () => {
+      try {
+        const response = await axios.get("http://localhost:8080/user-data");
+        setDateString(response.data.created_at); // Ensure the correct path to the date field
+      } catch (error) {
+        console.log("Error while fetching the date:", error);
+      }
+    };
+    fetchDate();
+  }, []);
+
   const renderCellContent = (info, header) => {
     switch (header) {
-      case "Selected Pole":
+      case "Pole":
         return info.selectpole;
-      case "Selected Pole Status":
+      case "Pole Status":
         return info.selectpolestatus;
-      case "Selected Pole Location":
+      case "Pole Location":
         return info.selectpolelocation;
       case "Description":
         return info.description;
@@ -71,7 +95,7 @@ const ListInfoMap = ({ locationData }) => {
           <Typography
             sx={{
               cursor: "pointer",
-              color: "blue",
+              color: getMarkerColor(dateString),
               textDecoration: "underline",
             }}
             onClick={handleUserDataClick}
