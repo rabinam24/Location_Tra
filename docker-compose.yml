@@ -51,7 +51,8 @@ services:
       DB_USER: binam
       DB_PASSWORD: Bhandari
       DB_NAME: binam
-      MINIO_ENDPOINT: 172.17.0.1:9000
+      # MINIO_ENDPOINT: 172.17.0.1:9000
+      MINIO_ENDPOINT: minio-server:9000
       MINIO_ACCESS_KEY: "DXeRSzJ1flBOehb5Bc1o"
       MINIO_SECRET_KEY: "tgCTzYPo8YeWzktmIl9A35PqR1TsiPN8wjOtslii"
       MINIO_SSL: "false"

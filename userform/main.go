@@ -50,9 +50,10 @@ type StartEnd struct {
 }
 
 type GPSData struct {
-	ID        int
-	Latitude  float64
-	Longitude float64
+	ID        int       `json:"id"`
+	Latitude  float64   `json:"latitude"`
+	Longitude float64   `json:"longitude"`
+	Date      time.Time `json:"date"`
 }
 
 var upgrader = websocket.Upgrader{
@@ -402,43 +403,43 @@ func handleUserData(db *sql.DB) http.HandlerFunc {
 	}
 }
 
-func handleTotalDistance(db *sql.DB) http.HandlerFunc {
+func handleTotalDistances(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// Query to fetch all GPS data ordered by ID
-		query := `SELECT id, latitude, longitude FROM userform ORDER BY id`
+		query := `SELECT id, latitude, longitude, created_at::date AS date
+		          FROM userform
+		          WHERE created_at >= Now() - INTERVAL '7 days'
+		          ORDER BY date`
 
 		rows, err := db.Query(query)
 		if err != nil {
-			log.Printf("Error querying rows: %v", err)
-			http.Error(w, "Error querying rows", http.StatusInternalServerError)
+			log.Printf("Error while querying the data: %v", err)
+			http.Error(w, "Error while querying the data", http.StatusInternalServerError)
 			return
 		}
 		defer rows.Close()
 
-		var totalDistance float64
+		type DailyDistance struct {
+			Date     string   `json:"date"`
+			Distance *float64 `json:"distance"`
+		}
+
+		dailyDistances := make(map[string]float64)
 		var previousData *GPSData
 
-		// Iterate through the rows and calculate the total distance
 		for rows.Next() {
 			var gpsData GPSData
-			err := rows.Scan(&gpsData.ID, &gpsData.Latitude, &gpsData.Longitude)
+			err := rows.Scan(&gpsData.ID, &gpsData.Latitude, &gpsData.Longitude, &gpsData.Date)
 			if err != nil {
 				log.Printf("Error scanning rows: %v", err)
 				http.Error(w, "Error scanning rows", http.StatusInternalServerError)
 				return
 			}
 
-			if previousData != nil {
-				// Calculate the distance between previousData and gpsData
-				totalDistance += calculateDistance(previousData.Latitude, previousData.Longitude, gpsData.Latitude, gpsData.Longitude)
+			dateStr := gpsData.Date.Format("2006-01-02")
+			if previousData != nil && previousData.Date.Format("2006-01-02") == dateStr {
+				dailyDistances[dateStr] += calculateDistance(previousData.Latitude, previousData.Longitude, gpsData.Latitude, gpsData.Longitude)
 			}
 			previousData = &gpsData
-		}
-
-		// Check if there's any error in the row iterations
-		type GPSData struct {
-			Date     time.Time `json:"date"`
-			Distance float64   `json:"distance"`
 		}
 
 		if err := rows.Err(); err != nil {
@@ -447,11 +448,15 @@ func handleTotalDistance(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		// Prepare the JSON response
-		response := struct {
-			TotalDistance float64 `json:"total_distance"`
-		}{
-			TotalDistance: totalDistance,
+		// Prepare the response for the last 7 days
+		response := make([]DailyDistance, 7)
+		for i := 0; i < 7; i++ {
+			date := time.Now().AddDate(0, 0, -i).Format("2006-01-02")
+			if distance, found := dailyDistances[date]; found {
+				response[6-i] = DailyDistance{Date: date, Distance: &distance}
+			} else {
+				response[6-i] = DailyDistance{Date: date, Distance: nil}
+			}
 		}
 
 		// Convert the response to JSON
@@ -472,7 +477,7 @@ func handleTotalDistance(db *sql.DB) http.HandlerFunc {
 func calculateDistance(lat1, lon1, lat2, lon2 float64) float64 {
 	const EarthRadius = 6371 // Earth's radius in kilometers
 
-	// Convert latitude and longitude from degrees to radiansdddd
+	// Convert latitude and longitude from degrees to radians
 	lat1 = lat1 * math.Pi / 180
 	lat2 = lat2 * math.Pi / 180
 	lon1 = lon1 * math.Pi / 180
@@ -733,7 +738,7 @@ func main() {
 	http.HandleFunc("/start-trip", handleStartTrip(db))
 	http.HandleFunc("/end-trip", handleEndTrip(db))
 	http.HandleFunc("/get-form-data", handleGetFormData(db))
-	http.HandleFunc("/total-distance", handleTotalDistance(db))
+	http.HandleFunc("/total-distances", handleTotalDistances(db))
 
 	// CORS middleware
 	corsMiddleware := func(next http.Handler) http.Handler {

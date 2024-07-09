@@ -9,10 +9,9 @@ import DialogTitle from "@mui/material/DialogTitle";
 import Form from "./FormInput";
 import HorizontalBars from "./Dashboard";
 import Home from "../Routes/Homepage";
-// import MapWithMarkers from "./MapComponent";
-import ImageGallery from "./PoleImage";
 import axios from "axios"; // Import Axios
 import MapWithWebSocket from "./MapComponent";
+import "../Newlanding.css"
 
 function NewLanding() {
   const [trip, setTrip] = useState({
@@ -21,13 +20,9 @@ function NewLanding() {
     elapsedTime: 0,
     id: null,
   });
-  const [showAddTravelLogButton, setShowAddTravelLogButton] = useState(false);
-  const [ShowTravelLogDetails, setShowAddTravelLogDetails] = useState(false);
-  const [ShowUserMapDetails, setShowUserMapDetails] = useState(false);
-  const [showUserData, setShowUserData] = useState(false);
+  const [activeComponent, setActiveComponent] = useState(null);
   const intervalIdRef = useRef(null);
   const [openModal, setOpenModal] = useState(false);
-  const [showUserMap, setShowUserMap] = useState(false);
 
   // Scroll to top when component mounts
   useEffect(() => {
@@ -42,14 +37,19 @@ function NewLanding() {
     if (savedTrip && savedTrip.started) {
       const elapsedTime = new Date() - new Date(savedTrip.startTime);
       setTrip({ ...savedTrip, elapsedTime });
-      setShowAddTravelLogButton(true);
+      const savedActiveComponent = localStorage.getItem("activeComponent");
+      setActiveComponent(savedActiveComponent || "ADD_TRAVEL_LOG");
     }
   }, []);
 
-  // Save trip state to localStorage
+  // Save trip state and activeComponent to localStorage
   useEffect(() => {
     localStorage.setItem("trip", JSON.stringify(trip));
   }, [trip]);
+
+  useEffect(() => {
+    localStorage.setItem("activeComponent", activeComponent);
+  }, [activeComponent]);
 
   const handleStartClick = async () => {
     const userId = 1; // Replace with actual user ID or other required data
@@ -82,8 +82,7 @@ function NewLanding() {
         elapsedTime: 0,
         id: response.data.tripId,
       });
-      setShowAddTravelLogButton(true);
-      setShowUserData(false); // Hide user data when starting the trip
+      setActiveComponent("ADD_TRAVEL_LOG");
       setOpenModal(false);
     } catch (error) {
       console.error(
@@ -120,7 +119,7 @@ function NewLanding() {
       if (intervalIdRef.current) {
         clearInterval(intervalIdRef.current);
       }
-      setShowAddTravelLogButton(false);
+      setActiveComponent(null);
     } catch (error) {
       console.error(
         "Error ending trip:",
@@ -142,20 +141,18 @@ function NewLanding() {
     return () => clearInterval(intervalIdRef.current);
   }, [trip.started, trip.startTime]);
 
-  const handleUserDataClick = () => {
-    setShowUserData(!showUserData);
-  };
-
-  const handleUserMapClick = () => {
-    setShowUserMap(!showUserMap);
-  };
-
   const formatElapsedTime = (elapsedTime) => {
     const seconds = Math.floor(elapsedTime / 1000) % 60;
     const minutes = Math.floor(elapsedTime / (1000 * 60)) % 60;
     const hours = Math.floor(elapsedTime / (1000 * 60 * 60));
 
     return `${hours}h: ${minutes}m: ${seconds}s`;
+  };
+
+  const toggleComponent = (component) => {
+    setActiveComponent((prevComponent) =>
+      prevComponent === component ? null : component
+    );
   };
 
   return (
@@ -184,7 +181,7 @@ function NewLanding() {
                   <Button
                     variant="contained"
                     color="primary"
-                    onClick={handleUserDataClick}
+                    onClick={() => toggleComponent("TRAVEL_LOG")}
                   >
                     Travel Log
                   </Button>
@@ -194,7 +191,7 @@ function NewLanding() {
                   <Button
                     variant="contained"
                     color="primary"
-                    onClick={handleUserMapClick}
+                    onClick={() => toggleComponent("USER_MAP")}
                   >
                     Show Map
                   </Button>
@@ -227,15 +224,6 @@ function NewLanding() {
             </>
           )}
 
-          {!trip.started && (
-            <Grid>
-              <HorizontalBars />
-            </Grid>
-          )}
-
-          {showUserData && <Home />}
-          {showUserMap && <MapWithWebSocket />}
-
           {trip.started && (
             <>
               <h1 className="text-3xl"> Welcome Rabinam </h1>
@@ -258,12 +246,10 @@ function NewLanding() {
                 <Grid item>
                   <Button
                     variant="contained"
-                    color="error"
-                    onClick={() =>
-                      setShowAddTravelLogButton(!showAddTravelLogButton)
-                    }
+                    color="primary"
+                    onClick={() => toggleComponent("ADD_TRAVEL_LOG")}
                   >
-                    {showAddTravelLogButton
+                    {activeComponent === "ADD_TRAVEL_LOG"
                       ? "Hide Travel Log"
                       : "Show Travel Log"}
                   </Button>
@@ -283,11 +269,9 @@ function NewLanding() {
                   <Button
                     variant="contained"
                     color="primary"
-                    onClick={() =>
-                      setShowAddTravelLogDetails(!ShowTravelLogDetails)
-                    }
+                    onClick={() => toggleComponent("TRAVEL_LOG_DETAILS")}
                   >
-                    {ShowTravelLogDetails
+                    {activeComponent === "TRAVEL_LOG_DETAILS"
                       ? "Hide Travel Log Details"
                       : "Show Travel Log Details"}
                   </Button>
@@ -297,22 +281,24 @@ function NewLanding() {
                   <Button
                     variant="contained"
                     color="primary"
-                    onClick={() =>
-                      setShowUserMapDetails(!ShowUserMapDetails)
-                    }
+                    onClick={() => toggleComponent("USER_MAP_DETAILS")}
                   >
-                    {ShowUserMapDetails
+                    {activeComponent === "USER_MAP_DETAILS"
                       ? "Hide User Map Details"
                       : "Show User Map Details"}
                   </Button>
                 </Grid>
               </Grid>
-
-              {showAddTravelLogButton && <Form />}
-              {ShowTravelLogDetails && <Home />}
-              {ShowUserMapDetails && <MapWithWebSocket />}
             </>
           )}
+
+          {activeComponent === "ADD_TRAVEL_LOG" && <Form />}
+          {activeComponent === "TRAVEL_LOG" && <Home />}
+          {activeComponent === "USER_MAP" && <MapWithWebSocket />}
+          {activeComponent === "TRAVEL_LOG_DETAILS" && <Home />}
+          {activeComponent === "USER_MAP_DETAILS" && <MapWithWebSocket />}
+
+          {!trip.started && <HorizontalBars />}
         </Grid>
       </Grid>
     </>
