@@ -1,17 +1,28 @@
 import React, { useState, useEffect, useRef } from "react";
-import Button from "@mui/material/Button";
-import Grid from "@mui/material/Grid";
-import Dialog from "@mui/material/Dialog";
-import DialogActions from "@mui/material/DialogActions";
-import DialogContent from "@mui/material/DialogContent";
-import DialogContentText from "@mui/material/DialogContentText";
-import DialogTitle from "@mui/material/DialogTitle";
+import { Button, Grid, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle } from "@mui/material";
 import Form from "./FormInput";
 import HorizontalBars from "./Dashboard";
 import Home from "../Routes/Homepage";
-import axios from "axios"; // Import Axios
+import axios from "axios";
 import MapWithWebSocket from "./MapComponent";
-import "../Newlanding.css"
+import "../Newlanding.css";
+import { useForm } from '@mantine/form';
+import { 
+  TextInput, 
+  PasswordInput, 
+  Text, 
+  Paper, 
+  Group, 
+  Divider, 
+  Checkbox, 
+  Anchor, 
+  Stack,
+  Alert
+} from '@mantine/core';
+import { useToggle, upperFirst } from '@mantine/hooks';
+import { IconAlertCircle, IconCheck } from '@tabler/icons-react';
+import GoogleButton from './GoogleButton';
+import GitHubButton from './GithubButton';
 
 function NewLanding() {
   const [trip, setTrip] = useState({
@@ -23,15 +34,17 @@ function NewLanding() {
   const [activeComponent, setActiveComponent] = useState(null);
   const intervalIdRef = useRef(null);
   const [openModal, setOpenModal] = useState(false);
+  const [openAuthModal, setOpenAuthModal] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [authMessage, setAuthMessage] = useState({ type: null, content: '' });
+  const [username, setUsername] = useState('');
 
-  // Scroll to top when component mounts
   useEffect(() => {
     window.onbeforeunload = () => {
       window.scrollTo(0, 0);
     };
   }, []);
 
-  // Load trip state from localStorage
   useEffect(() => {
     const savedTrip = JSON.parse(localStorage.getItem("trip"));
     if (savedTrip && savedTrip.started) {
@@ -42,7 +55,6 @@ function NewLanding() {
     }
   }, []);
 
-  // Save trip state and activeComponent to localStorage
   useEffect(() => {
     localStorage.setItem("trip", JSON.stringify(trip));
   }, [trip]);
@@ -55,10 +67,9 @@ function NewLanding() {
     const userId = 1; // Replace with actual user ID or other required data
 
     try {
-      // Correct the request data according to the server's requirements
       const requestData = {
         userId: userId,
-        startTime: new Date().toISOString(), // Example start time
+        startTime: new Date().toISOString(),
       };
 
       const response = await axios.post(
@@ -99,8 +110,8 @@ function NewLanding() {
       const response = await axios.post(
         "http://localhost:8080/end-trip",
         {
-          tripId: trip.id, // Accessing tripId from state
-          userId: userId, // Using userId defined in function
+          tripId: trip.id,
+          userId: userId,
           endTime: new Date().toISOString(),
         },
         {
@@ -155,6 +166,172 @@ function NewLanding() {
     );
   };
 
+  const handleAuthClick = () => {
+    setOpenAuthModal(true);
+  };
+
+  const handleAuthSuccess = (username) => {
+    setIsAuthenticated(true);
+    setUsername(username);
+    setOpenAuthModal(false);
+    setOpenModal(true);
+  };
+
+  const AuthenticationForm = () => {
+    const [type, toggle] = useToggle(['login', 'register']);
+    const form = useForm({
+      initialValues: {
+        email: '',
+        name: '',
+        phone: '',
+        password: '',
+        terms: true,
+      },
+      validate: {
+        email: (val) => (/^\S+@\S+$/.test(val) ? null : 'Invalid email'),
+        password: (val) => (val.length <= 6 ? 'Password should include at least 6 characters' : null),
+      },
+    });
+  
+    const handleSubmit = async (values) => {
+      try {
+        if (type === 'register') {
+          await axios.post('http://localhost:8080/sign-up', {
+            username: values.name,
+            email: values.email,
+            phone: values.phone,
+            password: values.password,
+          });
+  
+          setAuthMessage({ type: 'success', content: 'Registration successful. Please log in.' });
+          toggle();
+          form.reset();
+        } else {
+          const response = await axios.post('http://localhost:8080/login', {
+            email: values.email,
+            password: values.password,
+          });
+  
+          if (response && response.data) {
+            const { access_token, refresh_token, username } = response.data;
+  
+            localStorage.setItem('accessToken', access_token);
+            localStorage.setItem('refreshToken', refresh_token);
+  
+            axios.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
+  
+            setAuthMessage({ type: 'success', content: 'Login successful. Welcome back!' });
+            form.reset();
+            setTimeout(() => {
+              setAuthMessage("");
+            }, 2000);
+            handleAuthSuccess(username);
+          } else {
+            throw new Error('Login response does not contain data');
+          }
+        }
+      } catch (error) {
+        console.error('Error during authentication:', error);
+        setAuthMessage({ 
+          type: 'error', 
+          content: type === 'register' 
+            ? 'Registration failed. Please try again.' 
+            : 'Login failed. Please check your credentials.'
+        });
+      }
+    };
+  
+    return (
+      <Paper radius="md" p="xl" withBorder {...form.props}>
+        <Text size="lg" weight={500}>
+          Welcome, {type} with
+        </Text>
+  
+        <Group grow mb="md" mt="md">
+          <GoogleButton radius="xl">Google</GoogleButton>
+          <GitHubButton radius="xl">GitHub</GitHubButton>
+        </Group>
+  
+        <Divider label="Or continue with email" labelPosition="center" my="lg" />
+  
+        <form onSubmit={form.onSubmit(handleSubmit)}>
+          <Stack>
+            {type === 'register' && (
+              <>
+                <TextInput
+                  required
+                  label="Username"
+                  placeholder="Username"
+                  value={form.values.name}
+                  onChange={(event) => form.setFieldValue('name', event.currentTarget.value)}
+                />
+                <TextInput
+                  required
+                  label="Phone"
+                  placeholder="9862220888"
+                  value={form.values.phone}
+                  onChange={(event) => form.setFieldValue('phone', event.currentTarget.value)}
+                />
+              </>
+            )}
+  
+            <TextInput
+              required
+              label="Email"
+              placeholder="hello@example.com"
+              value={form.values.email}
+              onChange={(event) => form.setFieldValue('email', event.currentTarget.value)}
+              error={form.errors.email && 'Invalid email'}
+            />
+  
+            <PasswordInput
+              required
+              label="Password"
+              placeholder="Your password"
+              value={form.values.password}
+              onChange={(event) => form.setFieldValue('password', event.currentTarget.value)}
+              error={form.errors.password && 'Password should include at least 6 characters'}
+            />
+  
+            {type === 'register' && (
+              <Checkbox
+                label="I accept terms and conditions"
+                checked={form.values.terms}
+                onChange={(event) => form.setFieldValue('terms', event.currentTarget.checked)}
+              />
+            )}
+          </Stack>
+  
+          <Group position="apart" mt="xl">
+            <Anchor
+              component="button"
+              type="button"
+              color="dimmed"
+              onClick={() => toggle()}
+              size="xs"
+            >
+              {type === 'register'
+                ? 'Already have an account? Login'
+                : "Don't have an account? Register"}
+            </Anchor>
+            <Button type="submit">{upperFirst(type)}</Button>
+          </Group>
+        </form>
+  
+        {authMessage.type && (
+          <Alert 
+            icon={authMessage.type === 'success' ? <IconCheck size="1rem" /> : <IconAlertCircle size="1rem" />} 
+            title={upperFirst(authMessage.type)} 
+            color={authMessage.type === 'success' ? 'green' : 'red'}
+            mt="md"
+          >
+            {authMessage.content}
+          </Alert>
+        )}
+      </Paper>
+    );
+  };
+
   return (
     <>
       <Grid container justifyContent="center" spacing={2} display={"flex"}>
@@ -172,7 +349,7 @@ function NewLanding() {
                   <Button
                     variant="contained"
                     color="error"
-                    onClick={() => setOpenModal(true)}
+                    onClick={handleAuthClick}
                   >
                     Start The Trip
                   </Button>
@@ -186,7 +363,6 @@ function NewLanding() {
                     Travel Log
                   </Button>
                 </Grid>
-
                 <Grid item>
                   <Button
                     variant="contained"
@@ -197,6 +373,17 @@ function NewLanding() {
                   </Button>
                 </Grid>
               </Grid>
+
+              <Dialog 
+                open={openAuthModal} 
+                onClose={() => setOpenAuthModal(false)}
+                maxWidth="sm"
+                fullWidth
+              >
+                <DialogContent>
+                  <AuthenticationForm />
+                </DialogContent>
+              </Dialog>
 
               <Dialog
                 open={openModal}
@@ -226,7 +413,7 @@ function NewLanding() {
 
           {trip.started && (
             <>
-              <h1 className="text-3xl"> Welcome Rabinam </h1>
+              <h1 className="text-3xl"> Welcome {username} </h1>
               <p className="text-xl" style={{ margin: "10px" }}>
                 Trip started at:{" "}
                 <span className="font-bold">

@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import Apps from "./App.jsx";
 import { Auth0Provider } from "@auth0/auth0-react";
 import { MantineProvider } from "@mantine/core";
+import '@mantine/core/styles.css';
 import "./index.css";
 
 const root = createRoot(document.getElementById("root"));
@@ -14,7 +15,7 @@ root.render(
       clientId="cUVDIVtOPIn26P2urWp5sxAoIc59TuFj"
       authorizationParams={{ redirect_uri: window.location.origin }}
     >
-      <MantineProvider>
+      <MantineProvider withGlobalStyles withNormalizeCSS>
         <Apps />
       </MantineProvider>
     </Auth0Provider>
