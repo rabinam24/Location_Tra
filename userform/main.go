@@ -15,15 +15,22 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/websocket"
 	_ "github.com/lib/pq"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type config struct {
 	db struct {
 		dsn string
+	}
+	jwt struct {
+		secretKey       string
+		accessTokenTTL  time.Duration
+		refreshTokenTTL time.Duration
 	}
 }
 
@@ -62,6 +69,29 @@ var upgrader = websocket.Upgrader{
 	},
 }
 
+type User struct {
+	Username string `json:"username"`
+	Email    string `json:"email"`
+	Phone    string `json:"phone"`
+	Password string `json:"password"`
+}
+
+type PasswordChanger struct {
+	Email       string `json:"email"`
+	OldPassword string `json:"old_password"`
+	NewPassword string `json:"new_password"`
+}
+
+type AuthResponse struct {
+	AccessToken  string `json:"access_token"`
+	RefreshToken string `json:"refresh_token"`
+}
+
+type TokenClaims struct {
+	Email string `json:"email"`
+	jwt.StandardClaims
+}
+
 func handleWebSocketConnections(w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -98,6 +128,200 @@ func handleWebSocketConnections(w http.ResponseWriter, r *http.Request) {
 			}
 			break
 		}
+
+	}
+}
+
+func handleInsertUserDetails(db *sql.DB, user User) error {
+	hashedPassword, err := hashPassword(user.Password)
+	if err != nil {
+		return err
+	}
+	query := `INSERT INTO users (username, email, phone , password ) VALUES ($1,$2,$3,$4)`
+	_, err = db.Exec(query, user.Username, user.Email, user.Phone, hashedPassword)
+	if err != nil {
+		return err
+	}
+	return nil
+
+}
+
+func hashPassword(password string) (string, error) {
+	bytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	return string(bytes), err
+}
+
+func checkPasswordHash(password, hash string) bool {
+	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
+	return err == nil
+}
+
+func handleUserSignup(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var userData User
+		if err := json.NewDecoder(r.Body).Decode(&userData); err != nil {
+			log.Printf("Error decoding the json data: %v", err)
+			http.Error(w, "Error decoding the json data", http.StatusInternalServerError)
+			return
+		}
+		if db != nil {
+			if err := handleInsertUserDetails(db, userData); err != nil {
+				log.Printf("Error inserting the data into the database:%v", err)
+				http.Error(w, "Error inserting the data into the database", http.StatusInternalServerError)
+				return
+			}
+		}
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("Data inserted Sucessfully"))
+
+	}
+}
+
+func generateJWT(email string, secretKey string, ttl time.Duration) (string, error) {
+	claims := TokenClaims{
+		Email: email,
+		StandardClaims: jwt.StandardClaims{
+			ExpiresAt: time.Now().Add(ttl).Unix(),
+		},
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString([]byte(secretKey))
+}
+
+func handleUserLogin(db *sql.DB, cfg config) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var req User
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			log.Printf("Error decoding the request body: %v", err)
+			http.Error(w, "Invalid request payload", http.StatusBadRequest)
+			return
+		}
+
+		query := "SELECT password FROM users WHERE email = $1"
+		var storedPassword string
+		err := db.QueryRow(query, req.Email).Scan(&storedPassword)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				log.Printf("Email is not registered in the database: %v", req.Email)
+				http.Error(w, "Email not registered", http.StatusUnauthorized)
+				return
+			}
+			log.Printf("Error querying database: %v", err)
+			http.Error(w, "Internal server error", http.StatusInternalServerError)
+			return
+		}
+
+		if !checkPasswordHash(req.Password, storedPassword) {
+			log.Printf("Password does not match for email: %v", req.Email)
+			http.Error(w, "Invalid password", http.StatusUnauthorized)
+			return
+		}
+
+		accessToken, err := generateJWT(req.Email, cfg.jwt.secretKey, cfg.jwt.accessTokenTTL)
+		if err != nil {
+			log.Printf("Error generating access token: %v", err)
+			http.Error(w, "Internal server error", http.StatusInternalServerError)
+			return
+		}
+
+		refreshToken, err := generateJWT(req.Email, cfg.jwt.secretKey, cfg.jwt.refreshTokenTTL)
+		if err != nil {
+			log.Printf("Error generating refresh token: %v", err)
+			http.Error(w, "Internal server error", http.StatusInternalServerError)
+			return
+		}
+
+		response := AuthResponse{
+			AccessToken:  accessToken,
+			RefreshToken: refreshToken,
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(response)
+		w.Write([]byte("Login successfully done"))
+	}
+}
+
+func handleRefreshToken(cfg config) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var req AuthResponse
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			log.Printf("Error decoding the request body: %v", err)
+			http.Error(w, "Invalid request payload", http.StatusBadRequest)
+			return
+		}
+
+		claims := &TokenClaims{}
+		_, err := jwt.ParseWithClaims(req.RefreshToken, claims, func(token *jwt.Token) (interface{}, error) {
+			return []byte(cfg.jwt.secretKey), nil
+		})
+		if err != nil {
+			log.Printf("Invalid refresh token: %v", err)
+			http.Error(w, "Invalid refresh token", http.StatusUnauthorized)
+			return
+		}
+
+		newAccessToken, err := generateJWT(claims.Email, cfg.jwt.secretKey, cfg.jwt.accessTokenTTL)
+		if err != nil {
+			log.Printf("Error generating new access token: %v", err)
+			http.Error(w, "Internal server error", http.StatusInternalServerError)
+			return
+		}
+
+		response := AuthResponse{
+			AccessToken: newAccessToken,
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(response)
+	}
+}
+
+func handlePasswordChanger(db *sql.DB, cfg config) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var req PasswordChanger
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			log.Printf("Error decoding the json request:%v", err)
+			http.Error(w, "Error decoding the json request", http.StatusInternalServerError)
+			return
+		}
+
+		query := `SELECT password FROM users WHERE email= $1`
+		var storedPassword string
+		err := db.QueryRow(query, req.Email).Scan(&storedPassword)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				log.Printf("Email is not registered in the database:%v", req.Email)
+				http.Error(w, "Email is not registered in the database", http.StatusInternalServerError)
+				return
+			}
+			log.Printf("Error querying the database:%v", err)
+			http.Error(w, "Error querying the database", http.StatusInternalServerError)
+			return
+
+		}
+		if !checkPasswordHash(req.OldPassword, storedPassword) {
+			log.Printf("Password does not match for the email:%v", req.Email)
+			http.Error(w, "Password Invalid", http.StatusInternalServerError)
+			return
+		}
+
+		hashedPassword, err := hashPassword(req.NewPassword)
+		if err != nil {
+			log.Printf("Error hashing the new password:%v", err)
+			http.Error(w, "Error hashing the new Password", http.StatusInternalServerError)
+			return
+		}
+		UpdateQuery := `UPDATE users SET password = $1 WHERE email = $2`
+		_, err = db.Exec(UpdateQuery, hashedPassword, req.Email)
+		if err != nil {
+			log.Printf("Error updating password in the database: %v", err)
+			http.Error(w, "Internal server error", http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprintln(w, "Password updated successfully")
 
 	}
 }
@@ -701,6 +925,9 @@ func main() {
 	// Configuration for database connection
 	var cfg config
 	flag.StringVar(&cfg.db.dsn, "dsn", "", "Postgres connection string")
+	flag.StringVar(&cfg.jwt.secretKey, "jwt-secret", "your-secret-key", "JWT Secret Key")
+	flag.DurationVar(&cfg.jwt.accessTokenTTL, "access-token-ttl", 15*time.Minute, "Access Token TTL")
+	flag.DurationVar(&cfg.jwt.refreshTokenTTL, "refresh-token-ttl", 7*24*time.Hour, "Refresh Token TTL")
 	flag.Parse()
 
 	if cfg.db.dsn == "" {
@@ -739,6 +966,9 @@ func main() {
 	http.HandleFunc("/end-trip", handleEndTrip(db))
 	http.HandleFunc("/get-form-data", handleGetFormData(db))
 	http.HandleFunc("/total-distances", handleTotalDistances(db))
+	http.HandleFunc("/sign-up", handleUserSignup(db))
+	http.HandleFunc("/login", handleUserLogin(db, cfg))
+	http.HandleFunc("/password-changer", handlePasswordChanger(db, cfg))
 
 	// CORS middleware
 	corsMiddleware := func(next http.Handler) http.Handler {

@@ -23,4 +23,10 @@ CREATE TABLE public.trip (
 );
 
 
-
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    username VARCHAR(50) NOT NULL UNIQUE,
+    email VARCHAR(50) NOT NULL UNIQUE,\
+    phone VARCHAR(50) UNIQUE,
+    password VARCHAR(100) NOT NULL
+);
