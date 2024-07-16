@@ -16,7 +16,7 @@ CREATE TABLE userform (
 
 CREATE TABLE public.trip (
     id serial PRIMARY KEY,
-    user_id integer NOT NULL,
+    username VARCHAR NOT NULL UNIQUE,
     trip_started boolean NOT NULL,
     trip_start_time timestamp without time zone,
     trip_end_time timestamp without time zone
@@ -26,7 +26,7 @@ CREATE TABLE public.trip (
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
     username VARCHAR(50) NOT NULL UNIQUE,
-    email VARCHAR(50) NOT NULL UNIQUE,\
+    email VARCHAR(50) NOT NULL UNIQUE,
     phone VARCHAR(50) UNIQUE,
     password VARCHAR(100) NOT NULL
 );

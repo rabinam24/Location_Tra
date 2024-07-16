@@ -35,7 +35,7 @@ const MapWithWebSocket = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await axios.get("http://localhost:8080/get-form-data");
+        const response = await axios.get("http://localhost:8080//user-data");
         const data = response.data;
         setLocationData(data);
 

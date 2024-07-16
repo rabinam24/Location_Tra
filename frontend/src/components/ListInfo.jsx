@@ -44,7 +44,7 @@ const List = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await axios.get("http://localhost:8080/get-form-data");
+        const response = await axios.get("http://localhost:8080//user-data");
         setAllInfo(response.data);
       } catch (error) {
         console.error("Error fetching user data:", error);
@@ -158,7 +158,7 @@ const List = () => {
       <Grid justify="center">
         <Grid.Col span={12} md={10}>
           <Group position="apart" mb="md">
-            <Text weight={500} size="lg">
+            <Text weight={500} size="lg" className="justify-center">
               List of Entries
             </Text>
           </Group>

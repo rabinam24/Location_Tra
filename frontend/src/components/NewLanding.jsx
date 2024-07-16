@@ -1,28 +1,36 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Button, Grid, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle } from "@mui/material";
+import {
+  Button,
+  Grid,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
+} from "@mui/material";
 import Form from "./FormInput";
 import HorizontalBars from "./Dashboard";
 import Home from "../Routes/Homepage";
 import axios from "axios";
 import MapWithWebSocket from "./MapComponent";
 import "../Newlanding.css";
-import { useForm } from '@mantine/form';
-import { 
-  TextInput, 
-  PasswordInput, 
-  Text, 
-  Paper, 
-  Group, 
-  Divider, 
-  Checkbox, 
-  Anchor, 
+import { useForm } from "@mantine/form";
+import {
+  TextInput,
+  PasswordInput,
+  Text,
+  Paper,
+  Group,
+  Divider,
+  Checkbox,
+  Anchor,
   Stack,
-  Alert
-} from '@mantine/core';
-import { useToggle, upperFirst } from '@mantine/hooks';
-import { IconAlertCircle, IconCheck } from '@tabler/icons-react';
-import GoogleButton from './GoogleButton';
-import GitHubButton from './GithubButton';
+  Alert,
+} from "@mantine/core";
+import { useToggle, upperFirst } from "@mantine/hooks";
+import { IconAlertCircle, IconCheck } from "@tabler/icons-react";
+import GoogleButton from "./GoogleButton";
+import GitHubButton from "./GithubButton";
 
 function NewLanding() {
   const [trip, setTrip] = useState({
@@ -30,14 +38,15 @@ function NewLanding() {
     startTime: null,
     elapsedTime: 0,
     id: null,
+    username: "",
   });
   const [activeComponent, setActiveComponent] = useState(null);
   const intervalIdRef = useRef(null);
   const [openModal, setOpenModal] = useState(false);
   const [openAuthModal, setOpenAuthModal] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [authMessage, setAuthMessage] = useState({ type: null, content: '' });
-  const [username, setUsername] = useState('');
+  const [authMessage, setAuthMessage] = useState({ type: null, content: "" });
+  const [username, setUsername] = useState("");
 
   useEffect(() => {
     window.onbeforeunload = () => {
@@ -63,17 +72,37 @@ function NewLanding() {
     localStorage.setItem("activeComponent", activeComponent);
   }, [activeComponent]);
 
-  const handleStartClick = async () => {
-    const userId = 1; // Replace with actual user ID or other required data
+  useEffect(() => {
+    console.log("Authentication state changed:", isAuthenticated);
+  }, [isAuthenticated]);
 
+  useEffect(() => {
+    const storedUsername = localStorage.getItem("username");
+    if (storedUsername && storedUsername !== "undefined") {
+      setUsername(storedUsername);
+      setIsAuthenticated(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    console.log("Username updated:", username);
+  }, [username]);
+
+  const handleStartClick = async () => {
     try {
+      const storedUsername = localStorage.getItem("username");
+      if (!storedUsername) {
+        throw new Error("Username is not defined in localStorage");
+      }
+      console.log("Stored Username:", storedUsername);
+      
       const requestData = {
-        userId: userId,
+        username: storedUsername,
         startTime: new Date().toISOString(),
       };
-
+  
       const response = await axios.post(
-        "http://localhost:8080/start-trip",
+        "http://localhost:8080/start_trip",
         requestData,
         {
           headers: {
@@ -81,17 +110,18 @@ function NewLanding() {
           },
         }
       );
-
+  
       if (response.status !== 200) {
         throw new Error("Failed to start the trip");
       }
-
+  
       const currentTime = new Date();
       setTrip({
         started: true,
         startTime: currentTime,
         elapsedTime: 0,
         id: response.data.tripId,
+        username: storedUsername,
       });
       setActiveComponent("ADD_TRAVEL_LOG");
       setOpenModal(false);
@@ -102,16 +132,15 @@ function NewLanding() {
       );
     }
   };
-
+  
   const handleStopClick = async () => {
-    const userId = 1; // Replace with actual user ID
-
     try {
+      const storedUsername = localStorage.getItem("username");
       const response = await axios.post(
-        "http://localhost:8080/end-trip",
+        "http://localhost:8080/end_trip",
         {
           tripId: trip.id,
-          userId: userId,
+          username: storedUsername,
           endTime: new Date().toISOString(),
         },
         {
@@ -120,12 +149,12 @@ function NewLanding() {
           },
         }
       );
-
+  
       if (response.status !== 200) {
         throw new Error("Failed to end the trip");
       }
-
-      setTrip({ started: false, startTime: null, elapsedTime: 0, id: null });
+  
+      setTrip({ started: false, startTime: null, elapsedTime: 0, id: null, username: "" });
       localStorage.removeItem("trip");
       if (intervalIdRef.current) {
         clearInterval(intervalIdRef.current);
@@ -173,70 +202,103 @@ function NewLanding() {
   const handleAuthSuccess = (username) => {
     setIsAuthenticated(true);
     setUsername(username);
+    localStorage.setItem("username", username);
     setOpenAuthModal(false);
     setOpenModal(true);
+    console.log("This is the username", username);
   };
 
   const AuthenticationForm = () => {
-    const [type, toggle] = useToggle(['login', 'register']);
+    const [type, toggle] = useToggle(["login", "register"]);
     const form = useForm({
       initialValues: {
-        email: '',
-        name: '',
-        phone: '',
-        password: '',
+        email: "",
+        username: "",
+        phone: "",
+        password: "",
         terms: true,
       },
       validate: {
-        email: (val) => (/^\S+@\S+$/.test(val) ? null : 'Invalid email'),
-        password: (val) => (val.length <= 6 ? 'Password should include at least 6 characters' : null),
+        password: (val) =>
+          val.length <= 6
+            ? "Password should include at least 6 characters"
+            : null,
       },
     });
   
     const handleSubmit = async (values) => {
+      console.log("handleSubmit called with values:", values);
       try {
-        if (type === 'register') {
-          await axios.post('http://localhost:8080/sign-up', {
-            username: values.name,
+        if (type === "register") {
+          await axios.post("http://localhost:8080/sign-up", {
+            username: values.username,
             email: values.email,
             phone: values.phone,
             password: values.password,
           });
-  
-          setAuthMessage({ type: 'success', content: 'Registration successful. Please log in.' });
+          
+          setAuthMessage({
+            type: "success",
+            content: "Registration successful. Please log in.",
+          });
           toggle();
           form.reset();
+          setTimeout(() => {
+            setAuthMessage({ type: null, content: "" });
+          }, 2000);
         } else {
-          const response = await axios.post('http://localhost:8080/login', {
-            email: values.email,
-            password: values.password,
-          });
-  
-          if (response && response.data) {
-            const { access_token, refresh_token, username } = response.data;
-  
-            localStorage.setItem('accessToken', access_token);
-            localStorage.setItem('refreshToken', refresh_token);
-  
-            axios.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
-  
-            setAuthMessage({ type: 'success', content: 'Login successful. Welcome back!' });
+          console.log("Sending login request with:", values.username, values.password);
+          console.log("Axios instance:", axios);
+          
+          axios.post("http://localhost:8080/login", 
+            {
+              username: values.username,
+              password: values.password,
+            },
+            {
+              headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+              },
+            }
+          )
+          .then(response => {
+            console.log("Login response received:", response.data);
+            const { access_token, refresh_token } = response.data;
+            const username = values.username; // Use the username from the form
+          
+            localStorage.setItem("accessToken", access_token);
+            localStorage.setItem("refreshToken", refresh_token);
+            localStorage.setItem("username", username);
+          
+            axios.defaults.headers.common["Authorization"] = `Bearer ${access_token}`;
+          
+            setAuthMessage({
+              type: "success",
+              content: "Login successful. Welcome back!",
+            });
             form.reset();
             setTimeout(() => {
-              setAuthMessage("");
+              setAuthMessage({ type: null, content: "" });
             }, 2000);
             handleAuthSuccess(username);
-          } else {
-            throw new Error('Login response does not contain data');
-          }
+          })
+          .catch(error => {
+            console.error("Error during login:", error);
+            setAuthMessage({
+              type: "error",
+              content: "Login failed. Please check your credentials.",
+            });
+          });
         }
       } catch (error) {
-        console.error('Error during authentication:', error);
-        setAuthMessage({ 
-          type: 'error', 
-          content: type === 'register' 
-            ? 'Registration failed. Please try again.' 
-            : 'Login failed. Please check your credentials.'
+        console.error("Error during authentication:", error);
+        setAuthMessage({
+          type: "error",
+          content:
+            type === "register"
+              ? "Registration failed. Please try again."
+              : "Login failed. Please check your credentials.",
         });
       }
     };
@@ -252,36 +314,49 @@ function NewLanding() {
           <GitHubButton radius="xl">GitHub</GitHubButton>
         </Group>
   
-        <Divider label="Or continue with email" labelPosition="center" my="lg" />
+        <Divider
+          label="Or continue with username"
+          labelPosition="center"
+          my="lg"
+        />
   
-        <form onSubmit={form.onSubmit(handleSubmit)}>
+        <form onSubmit={(e) => {
+          e.preventDefault();
+          form.onSubmit(handleSubmit)(e);
+        }}>
           <Stack>
-            {type === 'register' && (
+            {type === "register" && (
               <>
                 <TextInput
                   required
-                  label="Username"
-                  placeholder="Username"
-                  value={form.values.name}
-                  onChange={(event) => form.setFieldValue('name', event.currentTarget.value)}
+                  label="Email"
+                  placeholder="hello@example.com"
+                  value={form.values.email}
+                  onChange={(event) =>
+                    form.setFieldValue("email", event.currentTarget.value)
+                  }
+                  error={form.errors.email && "Invalid email"}
                 />
                 <TextInput
                   required
                   label="Phone"
                   placeholder="9862220888"
                   value={form.values.phone}
-                  onChange={(event) => form.setFieldValue('phone', event.currentTarget.value)}
+                  onChange={(event) =>
+                    form.setFieldValue("phone", event.currentTarget.value)
+                  }
                 />
               </>
             )}
   
             <TextInput
               required
-              label="Email"
-              placeholder="hello@example.com"
-              value={form.values.email}
-              onChange={(event) => form.setFieldValue('email', event.currentTarget.value)}
-              error={form.errors.email && 'Invalid email'}
+              label="Username"
+              placeholder="Username"
+              value={form.values.username}
+              onChange={(event) =>
+                form.setFieldValue("username", event.currentTarget.value)
+              }
             />
   
             <PasswordInput
@@ -289,15 +364,22 @@ function NewLanding() {
               label="Password"
               placeholder="Your password"
               value={form.values.password}
-              onChange={(event) => form.setFieldValue('password', event.currentTarget.value)}
-              error={form.errors.password && 'Password should include at least 6 characters'}
+              onChange={(event) =>
+                form.setFieldValue("password", event.currentTarget.value)
+              }
+              error={
+                form.errors.password &&
+                "Password should include at least 6 characters"
+              }
             />
   
-            {type === 'register' && (
+            {type === "register" && (
               <Checkbox
                 label="I accept terms and conditions"
                 checked={form.values.terms}
-                onChange={(event) => form.setFieldValue('terms', event.currentTarget.checked)}
+                onChange={(event) =>
+                  form.setFieldValue("terms", event.currentTarget.checked)
+                }
               />
             )}
           </Stack>
@@ -310,8 +392,8 @@ function NewLanding() {
               onClick={() => toggle()}
               size="xs"
             >
-              {type === 'register'
-                ? 'Already have an account? Login'
+              {type === "register"
+                ? "Already have an account? Login"
                 : "Don't have an account? Register"}
             </Anchor>
             <Button type="submit">{upperFirst(type)}</Button>
@@ -319,10 +401,16 @@ function NewLanding() {
         </form>
   
         {authMessage.type && (
-          <Alert 
-            icon={authMessage.type === 'success' ? <IconCheck size="1rem" /> : <IconAlertCircle size="1rem" />} 
-            title={upperFirst(authMessage.type)} 
-            color={authMessage.type === 'success' ? 'green' : 'red'}
+          <Alert
+            icon={
+              authMessage.type === "success" ? (
+                <IconCheck size="1rem" />
+              ) : (
+                <IconAlertCircle size="1rem" />
+              )
+            }
+            title={upperFirst(authMessage.type)}
+            color={authMessage.type === "success" ? "green" : "red"}
             mt="md"
           >
             {authMessage.content}
@@ -374,8 +462,8 @@ function NewLanding() {
                 </Grid>
               </Grid>
 
-              <Dialog 
-                open={openAuthModal} 
+              <Dialog
+                open={openAuthModal}
                 onClose={() => setOpenAuthModal(false)}
                 maxWidth="sm"
                 fullWidth
@@ -470,7 +558,7 @@ function NewLanding() {
                     color="primary"
                     onClick={() => toggleComponent("USER_MAP_DETAILS")}
                   >
-                    {activeComponent === "USER_MAP_DETAILS"
+                    {activeComponent === "USER_MAP__DETAILS"
                       ? "Hide User Map Details"
                       : "Show User Map Details"}
                   </Button>
