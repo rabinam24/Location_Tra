@@ -1,49 +1,52 @@
-import React, { useState, useEffect } from 'react';
-import { useForm } from '@mantine/form';
-import { 
-  TextInput, 
-  PasswordInput, 
-  Text, 
-  Paper, 
-  Group, 
-  Button, 
-  Divider, 
-  Checkbox, 
-  Anchor, 
-  Stack, 
+import React, { useState, useEffect } from "react";
+import { useForm } from "@mantine/form";
+import {
+  TextInput,
+  PasswordInput,
+  Text,
+  Paper,
+  Group,
+  Button,
+  Divider,
+  Checkbox,
+  Anchor,
+  Stack,
   useMantineTheme,
-  Alert
-} from '@mantine/core';
-import { useToggle, upperFirst } from '@mantine/hooks';
-import { IconAlertCircle, IconCheck } from '@tabler/icons-react';
-import api from './AuthenticationAPI';
-import GoogleButton from './GoogleButton';
-import GitHubButton from './GithubButton';
+  Alert,
+} from "@mantine/core";
+import { useToggle, upperFirst } from "@mantine/hooks";
+import { IconAlertCircle, IconCheck } from "@tabler/icons-react";
+import api from "./AuthenticationAPI";
+import GoogleButton from "./GoogleButton";
+import GitHubButton from "./GithubButton";
 import "./authen.css";
 
 const AuthenticationForm = (props) => {
-  const [type, toggle] = useToggle(['login', 'register']);
+  const [type, toggle] = useToggle(["login", "register"]);
   const theme = useMantineTheme();
-  const [message, setMessage] = useState({ type: null, content: '' });
+  const [message, setMessage] = useState({ type: null, content: "" });
 
   const form = useForm({
     initialValues: {
-      email: '',
-      name: '',
-      phone: '',
-      password: '',
+      email: "",
+      username: "",
+      phone: "",
+      password: "",
       terms: true,
     },
     validate: {
-      email: (val) => (/^\S+@\S+$/.test(val) ? null : 'Invalid email'),
-      password: (val) => (val.length <= 6 ? 'Password should include at least 6 characters' : null),
+      email: (val) => (/^\S+@\S+$/.test(val) ? null : "Invalid email"),
+      password: (val) =>
+        val.length <= 6
+          ? "Password should include at least 6 characters"
+          : null,
     },
   });
 
   useEffect(() => {
-    if (message.type === 'success') {
+    if (message.type === "success") {
       const timer = setTimeout(() => {
-        setMessage({ type: null, content: '' });
+        setMessage({ type: null, content: "" });
       }, 2000);
       return () => clearTimeout(timer);
     }
@@ -51,44 +54,54 @@ const AuthenticationForm = (props) => {
 
   const handleSubmit = async (values) => {
     try {
-      if (type === 'register') {
-        await api.post('/sign-up', {
-          username: values.name,
+      if (type === "register") {
+        await api.post("/sign-up", {
+          username: values.username,
           email: values.email,
           phone: values.phone,
           password: values.password,
         });
 
-        setMessage({ type: 'success', content: 'Registration successful. Please log in.' });
+        setMessage({
+          type: "success",
+          content: "Registration successful. Please log in.",
+        });
         toggle();
         form.reset();
       } else {
-        const response = await api.post('/login', {
-          email: values.email,
+        const response = await api.post("/login", {
+          username: values.username,
           password: values.password,
         });
-
+        console.log("Sending login request with:", values.username, values.password);
+        
         if (response && response.data) {
           const { access_token, refresh_token } = response.data;
 
-          localStorage.setItem('accessToken', access_token);
-          localStorage.setItem('refreshToken', refresh_token);
+          localStorage.setItem("accessToken", access_token);
+          localStorage.setItem("refreshToken", refresh_token);
 
-          api.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
+          api.defaults.headers.common[
+            "Authorization"
+          ] = `Bearer ${access_token}`;
 
-          setMessage({ type: 'success', content: 'Login successful. Welcome back!' });
+          setMessage({
+            type: "success",
+            content: "Login successful. Welcome back!",
+          });
           form.reset();
         } else {
-          throw new Error('Login response does not contain data');
+          throw new Error("Login response does not contain data");
         }
       }
     } catch (error) {
-      console.error('Error during authentication:', error);
-      setMessage({ 
-        type: 'error', 
-        content: type === 'register' 
-          ? 'Registration failed. Please try again.' 
-          : 'Login failed. Please check your credentials.'
+      console.error("Error during authentication:", error);
+      setMessage({
+        type: "error",
+        content:
+          type === "register"
+            ? "Registration failed. Please try again."
+            : "Login failed. Please check your credentials.",
       });
     }
   };
@@ -96,11 +109,11 @@ const AuthenticationForm = (props) => {
   return (
     <Paper
       radius="md"
-      p={{ base: 'md', sm: 'xl' }}
+      p={{ base: "md", sm: "xl" }}
       withBorder
       style={{
         maxWidth: 400,
-        margin: 'auto',
+        margin: "auto",
       }}
       {...props}
     >
@@ -117,16 +130,17 @@ const AuthenticationForm = (props) => {
 
       <form onSubmit={form.onSubmit(handleSubmit)}>
         <Stack>
-          {type === 'register' && (
+          {type === "register" && (
             <>
               <TextInput
                 required
-                label="Username"
-                placeholder="Username"
-                value={form.values.name}
+                label="Email"
+                placeholder="hello@mantine.dev"
+                value={form.values.email}
                 onChange={(event) =>
-                  form.setFieldValue('name', event.currentTarget.value)
+                  form.setFieldValue("email", event.currentTarget.value)
                 }
+                error={form.errors.email && "Invalid email"}
               />
               <TextInput
                 required
@@ -134,7 +148,7 @@ const AuthenticationForm = (props) => {
                 placeholder="9862220888"
                 value={form.values.phone}
                 onChange={(event) =>
-                  form.setFieldValue('phone', event.currentTarget.value)
+                  form.setFieldValue("phone", event.currentTarget.value)
                 }
               />
             </>
@@ -142,13 +156,12 @@ const AuthenticationForm = (props) => {
 
           <TextInput
             required
-            label="Email"
-            placeholder="hello@mantine.dev"
-            value={form.values.email}
+            label="Username"
+            placeholder="Username"
+            value={form.values.username}
             onChange={(event) =>
-              form.setFieldValue('email', event.currentTarget.value)
+              form.setFieldValue("username", event.currentTarget.value)
             }
-            error={form.errors.email && 'Invalid email'}
           />
 
           <PasswordInput
@@ -157,20 +170,20 @@ const AuthenticationForm = (props) => {
             placeholder="Your password"
             value={form.values.password}
             onChange={(event) =>
-              form.setFieldValue('password', event.currentTarget.value)
+              form.setFieldValue("password", event.currentTarget.value)
             }
             error={
               form.errors.password &&
-              'Password should include at least 6 characters'
+              "Password should include at least 6 characters"
             }
           />
 
-          {type === 'register' && (
+          {type === "register" && (
             <Checkbox
               label="I accept terms and conditions"
               checked={form.values.terms}
               onChange={(event) =>
-                form.setFieldValue('terms', event.currentTarget.checked)
+                form.setFieldValue("terms", event.currentTarget.checked)
               }
             />
           )}
@@ -184,8 +197,8 @@ const AuthenticationForm = (props) => {
             onClick={() => toggle()}
             size="xs"
           >
-            {type === 'register'
-              ? 'Already have an account? Login'
+            {type === "register"
+              ? "Already have an account? Login"
               : "Don't have an account? Register"}
           </Anchor>
           <Button type="submit">{upperFirst(type)}</Button>
@@ -193,10 +206,16 @@ const AuthenticationForm = (props) => {
       </form>
 
       {message.type && (
-        <Alert 
-          icon={message.type === 'success' ? <IconCheck size="1rem" /> : <IconAlertCircle size="1rem" />} 
-          title={upperFirst(message.type)} 
-          color={message.type === 'success' ? 'green' : 'red'}
+        <Alert
+          icon={
+            message.type === "success" ? (
+              <IconCheck size="1rem" />
+            ) : (
+              <IconAlertCircle size="1rem" />
+            )
+          }
+          title={upperFirst(message.type)}
+          color={message.type === "success" ? "green" : "red"}
           mt="md"
         >
           {message.content}

@@ -50,7 +50,7 @@ type FormData struct {
 	CreatedAt          time.Time `json:"created_at"`
 }
 type StartEnd struct {
-	UserID        int       `json:"user_id"`
+	Username      string    `json:"username"`
 	TripStarted   bool      `json:"trip_started"`
 	TripStartTime time.Time `json:"trip_start_time"`
 	TripEndTime   time.Time `json:"trip_end_time"`
@@ -77,7 +77,7 @@ type User struct {
 }
 
 type PasswordChanger struct {
-	Email       string `json:"email"`
+	Username    string `json:"username"`
 	OldPassword string `json:"old_password"`
 	NewPassword string `json:"new_password"`
 }
@@ -88,7 +88,7 @@ type AuthResponse struct {
 }
 
 type TokenClaims struct {
-	Email string `json:"email"`
+	Username string `json:"username"`
 	jwt.StandardClaims
 }
 
@@ -177,9 +177,9 @@ func handleUserSignup(db *sql.DB) http.HandlerFunc {
 	}
 }
 
-func generateJWT(email string, secretKey string, ttl time.Duration) (string, error) {
+func generateJWT(username string, secretKey string, ttl time.Duration) (string, error) {
 	claims := TokenClaims{
-		Email: email,
+		Username: username,
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: time.Now().Add(ttl).Unix(),
 		},
@@ -197,13 +197,13 @@ func handleUserLogin(db *sql.DB, cfg config) http.HandlerFunc {
 			return
 		}
 
-		query := "SELECT password FROM users WHERE email = $1"
+		query := "SELECT password FROM users WHERE username = $1"
 		var storedPassword string
-		err := db.QueryRow(query, req.Email).Scan(&storedPassword)
+		err := db.QueryRow(query, req.Username).Scan(&storedPassword)
 		if err != nil {
 			if err == sql.ErrNoRows {
-				log.Printf("Email is not registered in the database: %v", req.Email)
-				http.Error(w, "Email not registered", http.StatusUnauthorized)
+				log.Printf("Username is not registered in the database: %v", req.Email)
+				http.Error(w, "Username not registered", http.StatusUnauthorized)
 				return
 			}
 			log.Printf("Error querying database: %v", err)
@@ -217,14 +217,14 @@ func handleUserLogin(db *sql.DB, cfg config) http.HandlerFunc {
 			return
 		}
 
-		accessToken, err := generateJWT(req.Email, cfg.jwt.secretKey, cfg.jwt.accessTokenTTL)
+		accessToken, err := generateJWT(req.Username, cfg.jwt.secretKey, cfg.jwt.accessTokenTTL)
 		if err != nil {
 			log.Printf("Error generating access token: %v", err)
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
 			return
 		}
 
-		refreshToken, err := generateJWT(req.Email, cfg.jwt.secretKey, cfg.jwt.refreshTokenTTL)
+		refreshToken, err := generateJWT(req.Username, cfg.jwt.secretKey, cfg.jwt.refreshTokenTTL)
 		if err != nil {
 			log.Printf("Error generating refresh token: %v", err)
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -261,7 +261,7 @@ func handleRefreshToken(cfg config) http.HandlerFunc {
 			return
 		}
 
-		newAccessToken, err := generateJWT(claims.Email, cfg.jwt.secretKey, cfg.jwt.accessTokenTTL)
+		newAccessToken, err := generateJWT(claims.Username, cfg.jwt.secretKey, cfg.jwt.accessTokenTTL)
 		if err != nil {
 			log.Printf("Error generating new access token: %v", err)
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -286,12 +286,12 @@ func handlePasswordChanger(db *sql.DB, cfg config) http.HandlerFunc {
 			return
 		}
 
-		query := `SELECT password FROM users WHERE email= $1`
+		query := `SELECT password FROM users WHERE username= $1`
 		var storedPassword string
-		err := db.QueryRow(query, req.Email).Scan(&storedPassword)
+		err := db.QueryRow(query, req.Username).Scan(&storedPassword)
 		if err != nil {
 			if err == sql.ErrNoRows {
-				log.Printf("Email is not registered in the database:%v", req.Email)
+				log.Printf("Email is not registered in the database:%v", req.Username)
 				http.Error(w, "Email is not registered in the database", http.StatusInternalServerError)
 				return
 			}
@@ -301,7 +301,7 @@ func handlePasswordChanger(db *sql.DB, cfg config) http.HandlerFunc {
 
 		}
 		if !checkPasswordHash(req.OldPassword, storedPassword) {
-			log.Printf("Password does not match for the email:%v", req.Email)
+			log.Printf("Password does not match for the email:%v", req.Username)
 			http.Error(w, "Password Invalid", http.StatusInternalServerError)
 			return
 		}
@@ -312,8 +312,8 @@ func handlePasswordChanger(db *sql.DB, cfg config) http.HandlerFunc {
 			http.Error(w, "Error hashing the new Password", http.StatusInternalServerError)
 			return
 		}
-		UpdateQuery := `UPDATE users SET password = $1 WHERE email = $2`
-		_, err = db.Exec(UpdateQuery, hashedPassword, req.Email)
+		UpdateQuery := `UPDATE users SET password = $1 WHERE username = $2`
+		_, err = db.Exec(UpdateQuery, hashedPassword, req.Username)
 		if err != nil {
 			log.Printf("Error updating password in the database: %v", err)
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -326,43 +326,92 @@ func handlePasswordChanger(db *sql.DB, cfg config) http.HandlerFunc {
 	}
 }
 
+func getTripData(db *sql.DB, username string) (*StartEnd, error) {
+	query := "SELECT username, trip_started, trip_start_time, trip_end_time FROM trip WHERE username = $1 ORDER BY id DESC LIMIT 1"
+	row := db.QueryRow(query, username)
+
+	var trip StartEnd
+	err := row.Scan(&trip.Username, &trip.TripStarted, &trip.TripStartTime, &trip.TripEndTime)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil // No trip data found
+		}
+		return nil, fmt.Errorf("failed to retrieve trip data: %w", err)
+	}
+
+	return &trip, nil
+}
+
+func upsertTripData(db *sql.DB, startEnd StartEnd) error {
+	query := `
+		INSERT INTO trip (username, trip_started, trip_start_time, trip_end_time)
+		VALUES ($1, $2, $3, $4)
+		ON CONFLICT (username)
+		DO UPDATE SET trip_started = EXCLUDED.trip_started, trip_start_time = EXCLUDED.trip_start_time, trip_end_time = EXCLUDED.trip_end_time
+	`
+
+	_, err := db.Exec(query, startEnd.Username, startEnd.TripStarted, startEnd.TripStartTime, startEnd.TripEndTime)
+	if err != nil {
+		return fmt.Errorf("failed to insert or update trip data: %w", err)
+	}
+
+	return nil
+}
+
 func handleStartTrip(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// Parse the request body to get the user ID
-		var requestBody struct {
-			UserID int `json:"userid"`
-		}
+		defer r.Body.Close()
 
+		// Parse the request body to get the username
 		body, err := io.ReadAll(r.Body)
 		if err != nil {
-			http.Error(w, "Failed to read request body", http.StatusBadRequest)
+			http.Error(w, "Failed to read request body: "+err.Error(), http.StatusBadRequest)
 			return
 		}
 
+		var requestBody struct {
+			Username string `json:"username"`
+		}
 		err = json.Unmarshal(body, &requestBody)
 		if err != nil {
-			http.Error(w, "Failed to parse request body", http.StatusBadRequest)
+			http.Error(w, "Failed to parse request body: "+err.Error(), http.StatusBadRequest)
 			return
 		}
 
-		userID := requestBody.UserID
+		// Extract the username from the parsed request body
+		username := requestBody.Username
+		if username == "" {
+			http.Error(w, "Username is missing in request body", http.StatusBadRequest)
+			return
+		}
+
+		// Check if there's an ongoing trip for the user
+		existingTrip, err := getTripData(db, username)
+		if err != nil {
+			http.Error(w, "Failed to query trip data: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		if existingTrip != nil && existingTrip.TripStarted {
+			http.Error(w, "Trip is already in progress", http.StatusConflict)
+			return
+		}
 
 		// Get the current time as the trip start time
 		tripStartTime := time.Now()
 
-		// Assuming you have the user ID, create a StartEnd struct
-		// with the appropriate data and call insertTripData to insert it into the database
+		// Create a StartEnd struct
 		startEnd := StartEnd{
-			UserID:        userID,
+			Username:      username,
 			TripStarted:   true,
 			TripStartTime: tripStartTime,
 			TripEndTime:   time.Time{}, // Trip end time is empty initially
 		}
 
-		// Insert trip data into the database
-		err = insertTripData(db, startEnd)
+		// Insert or update trip data in the database
+		err = upsertTripData(db, startEnd)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			http.Error(w, "Failed to insert or update trip data: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 
@@ -371,56 +420,53 @@ func handleStartTrip(db *sql.DB) http.HandlerFunc {
 		w.Write([]byte("Trip started successfully"))
 	}
 }
+
 func handleEndTrip(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// Parse the request body to get the user ID
-		var requestBody struct {
-			UserID int `json:"userid"`
-		}
+		defer r.Body.Close()
 
+		// Parse the request body to get the username
 		body, err := io.ReadAll(r.Body)
 		if err != nil {
-			http.Error(w, "Failed to read request body", http.StatusBadRequest)
+			http.Error(w, "Failed to read request body: "+err.Error(), http.StatusBadRequest)
 			return
 		}
 
+		var requestBody struct {
+			Username string `json:"username"`
+		}
 		err = json.Unmarshal(body, &requestBody)
 		if err != nil {
-			http.Error(w, "Failed to parse request body", http.StatusBadRequest)
+			http.Error(w, "Failed to parse request body: "+err.Error(), http.StatusBadRequest)
 			return
 		}
 
-		userID := requestBody.UserID
+		username := requestBody.Username
 
-		// Check if trip start time exists in local storage
-		tripStartTimeStr := r.Header.Get("X-Trip-Start-Time")
-		var tripStartTime time.Time
-		if tripStartTimeStr != "" {
-			// Trip start time found in local storage, parse it
-			tripStartTimeUnix, err := strconv.ParseInt(tripStartTimeStr, 10, 64)
-			if err != nil {
-				http.Error(w, "Invalid trip start time format", http.StatusBadRequest)
-				return
-			}
-			tripStartTime = time.Unix(tripStartTimeUnix, 0)
-		} else {
-			// Trip start time not found in local storage, use current time
-			tripStartTime = time.Now()
+		// Get trip data for the user
+		existingTrip, err := getTripData(db, username)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
 
-		// Assuming you have the user ID, create a StartEnd struct
-		// with the appropriate data and call insertTripData to insert it into the database
+		if existingTrip == nil || !existingTrip.TripStarted {
+			http.Error(w, "No trip in progress", http.StatusConflict)
+			return
+		}
+
+		// Create a StartEnd struct with updated trip data
 		startEnd := StartEnd{
-			UserID:        userID,
+			Username:      username,
 			TripStarted:   false,
-			TripStartTime: tripStartTime,
+			TripStartTime: existingTrip.TripStartTime,
 			TripEndTime:   time.Now(),
 		}
 
-		// Insert trip data into the database
-		err = insertTripData(db, startEnd)
+		// Update trip data in the database
+		err = upsertTripData(db, startEnd)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			http.Error(w, "Failed to update trip data: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 
@@ -430,13 +476,50 @@ func handleEndTrip(db *sql.DB) http.HandlerFunc {
 	}
 }
 
-func insertTripData(db *sql.DB, startEnd StartEnd) error {
-	query := `INSERT INTO trip (user_id, trip_started, trip_start_time, trip_end_time) VALUES ($1, $2, $3, $4)`
-	_, err := db.Exec(query, startEnd.UserID, startEnd.TripStarted, startEnd.TripStartTime, startEnd.TripEndTime)
-	if err != nil {
-		return err
+func handleGetTripState(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		defer r.Body.Close()
+
+		// Parse the request body to get the username
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			http.Error(w, "Failed to read request body: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		var requestBody struct {
+			Username string `json:"username"`
+		}
+		err = json.Unmarshal(body, &requestBody)
+		if err != nil {
+			http.Error(w, "Failed to parse request body: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		username := requestBody.Username
+
+		// Get trip data for the user
+		existingTrip, err := getTripData(db, username)
+		if err != nil {
+			http.Error(w, "Failed to retrieve trip data: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		if existingTrip == nil {
+			http.Error(w, "No trip data found", http.StatusNotFound)
+			return
+		}
+
+		// Respond with the trip state
+		responseBody, err := json.Marshal(existingTrip)
+		if err != nil {
+			http.Error(w, "Failed to marshal response: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+		w.Write(responseBody)
 	}
-	return nil
 }
 
 // uploadToMinIO uploads multiple objects to MinIO and returns their URLs.
@@ -962,12 +1045,13 @@ func main() {
 	http.HandleFunc("/api/gps-data", handlegetGpsData(db))
 	http.HandleFunc("/api/pole-image", handleUserPoleImage(db))
 	http.HandleFunc("/ws", handleWebSocketConnections)
-	http.HandleFunc("/start-trip", handleStartTrip(db))
-	http.HandleFunc("/end-trip", handleEndTrip(db))
-	http.HandleFunc("/get-form-data", handleGetFormData(db))
+	http.HandleFunc("/start_trip", handleStartTrip(db))
+	http.HandleFunc("/end_trip", handleEndTrip(db))
+	http.HandleFunc("/get_trip_state", handleGetTripState(db))
 	http.HandleFunc("/total-distances", handleTotalDistances(db))
 	http.HandleFunc("/sign-up", handleUserSignup(db))
 	http.HandleFunc("/login", handleUserLogin(db, cfg))
+	http.HandleFunc("/refresh-token", handleRefreshToken(cfg))
 	http.HandleFunc("/password-changer", handlePasswordChanger(db, cfg))
 
 	// CORS middleware
