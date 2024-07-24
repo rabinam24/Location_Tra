@@ -14,6 +14,7 @@ import Home from "../Routes/Homepage";
 import axios from "axios";
 import MapWithWebSocket from "./MapComponent";
 import "../Newlanding.css";
+import "./authen.css";
 import { useForm } from "@mantine/form";
 import {
   TextInput,
@@ -64,13 +65,39 @@ function NewLanding() {
     }
   }, []);
 
+
+  useEffect(() => {
+    const intervalId = setInterval(async () => {
+      try {
+        const response = await axios.post("http://localhost:8080/get_trip_state", { username });
+        if (response.status === 200) {
+          const tripData = response.data;
+          setTrip({
+            started: tripData.tripStarted,
+            startTime: new Date(tripData.tripStartTime),
+            elapsedTime: tripData.elapsedTime,
+            id: tripData.tripId,
+            username: username,
+          });
+          setActiveComponent(tripData.tripStarted ? "ADD_TRAVEL_LOG" : null);
+        }
+      } catch (error) {
+        console.error("Error polling trip status:", error);
+      }
+    }, 5000); // Poll every 5 seconds
+  
+    return () => clearInterval(intervalId);
+  }, [username]);
+  
++
   useEffect(() => {
     localStorage.setItem("trip", JSON.stringify(trip));
   }, [trip]);
-
+  
   useEffect(() => {
     localStorage.setItem("activeComponent", activeComponent);
   }, [activeComponent]);
+  
 
   useEffect(() => {
     console.log("Authentication state changed:", isAuthenticated);
@@ -90,83 +117,56 @@ function NewLanding() {
 
   const handleStartClick = async () => {
     try {
+        const storedUsername = localStorage.getItem("username");
+        if (!storedUsername) throw new Error("Username is not defined");
+  
+        const response = await axios.post("http://localhost:8080/start_trip", { username: storedUsername });
+        if (response.status === 200) {
+            const currentTime = new Date();
+            setTrip({
+                started: true,
+                startTime: currentTime,
+                elapsedTime: 0,
+                id: response.data.tripId,
+                username: storedUsername,
+            });
+            setActiveComponent("ADD_TRAVEL_LOG");
+        }
+    } catch (error) {
+        console.error("Error starting trip:", error);
+    }
+  };
+  
+
+  const handleStopClick = async () => {
+    try {
       const storedUsername = localStorage.getItem("username");
       if (!storedUsername) {
         throw new Error("Username is not defined in localStorage");
       }
-      console.log("Stored Username:", storedUsername);
-      
-      const requestData = {
-        username: storedUsername,
-        startTime: new Date().toISOString(),
-      };
   
-      const response = await axios.post(
-        "http://localhost:8080/start_trip",
-        requestData,
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
-  
-      if (response.status !== 200) {
-        throw new Error("Failed to start the trip");
-      }
-  
-      const currentTime = new Date();
-      setTrip({
-        started: true,
-        startTime: currentTime,
-        elapsedTime: 0,
-        id: response.data.tripId,
-        username: storedUsername,
-      });
-      setActiveComponent("ADD_TRAVEL_LOG");
-      setOpenModal(false);
-    } catch (error) {
-      console.error(
-        "Error starting trip:",
-        error.response ? error.response.data : error.message
-      );
-    }
-  };
-  
-  const handleStopClick = async () => {
-    try {
-      const storedUsername = localStorage.getItem("username");
       const response = await axios.post(
         "http://localhost:8080/end_trip",
-        {
-          tripId: trip.id,
-          username: storedUsername,
-          endTime: new Date().toISOString(),
-        },
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
+        { username: storedUsername },
+        { headers: { "Content-Type": "application/json" } }
+      );
+  
+      if (response.status === 200) {
+        setTrip({ started: false, startTime: null, elapsedTime: 0, id: null, username: "" });
+        localStorage.removeItem("trip");
+        if (intervalIdRef.current) {
+          clearInterval(intervalIdRef.current);
         }
-      );
-  
-      if (response.status !== 200) {
-        throw new Error("Failed to end the trip");
+        setActiveComponent(null);
       }
-  
-      setTrip({ started: false, startTime: null, elapsedTime: 0, id: null, username: "" });
-      localStorage.removeItem("trip");
-      if (intervalIdRef.current) {
-        clearInterval(intervalIdRef.current);
-      }
-      setActiveComponent(null);
     } catch (error) {
-      console.error(
-        "Error ending trip:",
-        error.response ? error.response.data : error.message
-      );
+      console.error("Error ending trip:", error.response ? error.response.data : error.message);
+      if (error.response && error.response.status === 409) {
+        alert("No active trip found. Please ensure a trip is in progress before trying to end it.");
+      }
     }
   };
+  
 
   useEffect(() => {
     if (trip.started && trip.startTime) {
@@ -176,19 +176,39 @@ function NewLanding() {
           elapsedTime: new Date() - new Date(prevTrip.startTime),
         }));
       }, 1000);
+    } else {
+      clearInterval(intervalIdRef.current);
     }
-
+  
     return () => clearInterval(intervalIdRef.current);
   }, [trip.started, trip.startTime]);
+  
 
+
+
+  useEffect(() => {
+    if (trip.started && trip.startTime) {
+      intervalIdRef.current = setInterval(() => {
+        setTrip((prevTrip) => ({
+          ...prevTrip,
+          elapsedTime: new Date() - new Date(prevTrip.startTime),
+        }));
+      }, 1000);
+    } else {
+      clearInterval(intervalIdRef.current);
+    }
+  
+    return () => clearInterval(intervalIdRef.current);
+  }, [trip.started, trip.startTime]);
+  
   const formatElapsedTime = (elapsedTime) => {
     const seconds = Math.floor(elapsedTime / 1000) % 60;
     const minutes = Math.floor(elapsedTime / (1000 * 60)) % 60;
     const hours = Math.floor(elapsedTime / (1000 * 60 * 60));
-
+  
     return `${hours}h: ${minutes}m: ${seconds}s`;
   };
-
+  
   const toggleComponent = (component) => {
     setActiveComponent((prevComponent) =>
       prevComponent === component ? null : component

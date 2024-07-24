@@ -158,9 +158,9 @@ const List = () => {
       <Grid justify="center">
         <Grid.Col span={12} md={10}>
           <Group position="apart" mb="md">
-            <Text weight={500} size="lg" className="justify-center">
+            {/* <Text weight={500} size="lg" className="justify-center">
               List of Entries
-            </Text>
+            </Text> */}
           </Group>
           <Paper
             shadow="xs"
