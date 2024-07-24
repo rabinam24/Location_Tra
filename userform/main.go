@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
@@ -49,11 +50,12 @@ type FormData struct {
 	MultipleImages     []string  `json:"multipleimages_urls"`
 	CreatedAt          time.Time `json:"created_at"`
 }
+
 type StartEnd struct {
-	Username      string    `json:"username"`
-	TripStarted   bool      `json:"trip_started"`
-	TripStartTime time.Time `json:"trip_start_time"`
-	TripEndTime   time.Time `json:"trip_end_time"`
+	Username      string
+	TripStarted   bool
+	TripStartTime *time.Time // Use pointers for nullable fields
+	TripEndTime   *time.Time
 }
 
 type GPSData struct {
@@ -325,7 +327,6 @@ func handlePasswordChanger(db *sql.DB, cfg config) http.HandlerFunc {
 
 	}
 }
-
 func getTripData(db *sql.DB, username string) (*StartEnd, error) {
 	query := "SELECT username, trip_started, trip_start_time, trip_end_time FROM trip WHERE username = $1 ORDER BY id DESC LIMIT 1"
 	row := db.QueryRow(query, username)
@@ -357,12 +358,10 @@ func upsertTripData(db *sql.DB, startEnd StartEnd) error {
 
 	return nil
 }
-
 func handleStartTrip(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		defer r.Body.Close()
 
-		// Parse the request body to get the username
 		body, err := io.ReadAll(r.Body)
 		if err != nil {
 			http.Error(w, "Failed to read request body: "+err.Error(), http.StatusBadRequest)
@@ -378,54 +377,65 @@ func handleStartTrip(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		// Extract the username from the parsed request body
 		username := requestBody.Username
 		if username == "" {
 			http.Error(w, "Username is missing in request body", http.StatusBadRequest)
 			return
 		}
 
-		// Check if there's an ongoing trip for the user
-		existingTrip, err := getTripData(db, username)
-		if err != nil {
-			http.Error(w, "Failed to query trip data: "+err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		if existingTrip != nil && existingTrip.TripStarted {
-			http.Error(w, "Trip is already in progress", http.StatusConflict)
-			return
-		}
-
-		// Get the current time as the trip start time
 		tripStartTime := time.Now()
 
-		// Create a StartEnd struct
 		startEnd := StartEnd{
 			Username:      username,
 			TripStarted:   true,
-			TripStartTime: tripStartTime,
-			TripEndTime:   time.Time{}, // Trip end time is empty initially
+			TripStartTime: &tripStartTime,
+			TripEndTime:   nil,
 		}
 
-		// Insert or update trip data in the database
 		err = upsertTripData(db, startEnd)
 		if err != nil {
 			http.Error(w, "Failed to insert or update trip data: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		// Send a response indicating that the trip has started
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("Trip started successfully"))
 	}
 }
 
+func getActiveTrips(db *sql.DB) ([]StartEnd, error) {
+	query := "SELECT username, trip_started, trip_start_time, trip_end_time FROM trip WHERE trip_started = true"
+	rows, err := db.Query(query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query active trips: %w", err)
+	}
+	defer rows.Close()
+
+	var trips []StartEnd
+	for rows.Next() {
+		var trip StartEnd
+		if err := rows.Scan(&trip.Username, &trip.TripStarted, &trip.TripStartTime, &trip.TripEndTime); err != nil {
+			return nil, fmt.Errorf("failed to scan trip data: %w", err)
+		}
+		trips = append(trips, trip)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating over rows: %w", err)
+	}
+
+	return trips, nil
+}
+
+var (
+	activeTripsMutex sync.Mutex
+	activeTrips      = make(map[string]*time.Time)
+)
+
 func handleEndTrip(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		defer r.Body.Close()
 
-		// Parse the request body to get the username
 		body, err := io.ReadAll(r.Body)
 		if err != nil {
 			http.Error(w, "Failed to read request body: "+err.Error(), http.StatusBadRequest)
@@ -442,11 +452,14 @@ func handleEndTrip(db *sql.DB) http.HandlerFunc {
 		}
 
 		username := requestBody.Username
+		if username == "" {
+			http.Error(w, "Username is missing in request body", http.StatusBadRequest)
+			return
+		}
 
-		// Get trip data for the user
 		existingTrip, err := getTripData(db, username)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			http.Error(w, "Failed to retrieve trip data: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 
@@ -455,22 +468,25 @@ func handleEndTrip(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		// Create a StartEnd struct with updated trip data
+		tripEndTime := time.Now()
+
 		startEnd := StartEnd{
 			Username:      username,
 			TripStarted:   false,
 			TripStartTime: existingTrip.TripStartTime,
-			TripEndTime:   time.Now(),
+			TripEndTime:   &tripEndTime,
 		}
 
-		// Update trip data in the database
 		err = upsertTripData(db, startEnd)
 		if err != nil {
 			http.Error(w, "Failed to update trip data: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		// Send a response indicating that the trip has ended
+		activeTripsMutex.Lock()
+		delete(activeTrips, username)
+		activeTripsMutex.Unlock()
+
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("Trip ended successfully"))
 	}
@@ -480,25 +496,16 @@ func handleGetTripState(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		defer r.Body.Close()
 
-		// Parse the request body to get the username
-		body, err := io.ReadAll(r.Body)
-		if err != nil {
-			http.Error(w, "Failed to read request body: "+err.Error(), http.StatusBadRequest)
-			return
-		}
-
 		var requestBody struct {
 			Username string `json:"username"`
 		}
-		err = json.Unmarshal(body, &requestBody)
-		if err != nil {
+		if err := json.NewDecoder(r.Body).Decode(&requestBody); err != nil {
 			http.Error(w, "Failed to parse request body: "+err.Error(), http.StatusBadRequest)
 			return
 		}
 
 		username := requestBody.Username
 
-		// Get trip data for the user
 		existingTrip, err := getTripData(db, username)
 		if err != nil {
 			http.Error(w, "Failed to retrieve trip data: "+err.Error(), http.StatusInternalServerError)
@@ -510,8 +517,22 @@ func handleGetTripState(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		// Respond with the trip state
-		responseBody, err := json.Marshal(existingTrip)
+		var elapsedTime int64
+		if existingTrip.TripStarted && existingTrip.TripStartTime != nil {
+			elapsedTime = time.Since(*existingTrip.TripStartTime).Milliseconds()
+		}
+
+		response := struct {
+			TripStarted   bool      `json:"tripStarted"`
+			TripStartTime time.Time `json:"tripStartTime"`
+			ElapsedTime   int64     `json:"elapsedTime"`
+		}{
+			TripStarted:   existingTrip.TripStarted,
+			TripStartTime: *existingTrip.TripStartTime,
+			ElapsedTime:   elapsedTime,
+		}
+
+		responseBody, err := json.Marshal(response)
 		if err != nil {
 			http.Error(w, "Failed to marshal response: "+err.Error(), http.StatusInternalServerError)
 			return

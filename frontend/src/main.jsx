@@ -1,10 +1,11 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
-import Apps from "./App.jsx";
+import App from "./App.jsx";
 import { Auth0Provider } from "@auth0/auth0-react";
 import { MantineProvider } from "@mantine/core";
 import '@mantine/core/styles.css';
 import "./index.css";
+import * as serviceWorkerRegistration from './serviceWorkerRegistration'; // Import the service worker registration
 
 const root = createRoot(document.getElementById("root"));
 
@@ -16,8 +17,11 @@ root.render(
       authorizationParams={{ redirect_uri: window.location.origin }}
     >
       <MantineProvider withGlobalStyles withNormalizeCSS>
-        <Apps />
+        <App />
       </MantineProvider>
     </Auth0Provider>
   </React.StrictMode>
 );
+
+// Register the service worker
+serviceWorkerRegistration.register();
