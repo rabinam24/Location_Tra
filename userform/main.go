@@ -52,10 +52,11 @@ type FormData struct {
 }
 
 type StartEnd struct {
-	Username      string
-	TripStarted   bool
-	TripStartTime *time.Time // Use pointers for nullable fields
-	TripEndTime   *time.Time
+	Username              string     `json:"username"`
+	TripStarted           bool       `json:"tripStarted"`
+	TripStartTime         *time.Time `json:"tripStartTime"`
+	TripEndTime           *time.Time `json:"tripEndTime"`
+	OriginalTripStartTime *time.Time `json:"originalTripStartTime"`
 }
 
 type GPSData struct {
@@ -328,11 +329,11 @@ func handlePasswordChanger(db *sql.DB, cfg config) http.HandlerFunc {
 	}
 }
 func getTripData(db *sql.DB, username string) (*StartEnd, error) {
-	query := "SELECT username, trip_started, trip_start_time, trip_end_time FROM trip WHERE username = $1 ORDER BY id DESC LIMIT 1"
+	query := "SELECT username, trip_started, trip_start_time, trip_end_time, original_trip_start_time FROM trip WHERE username = $1 ORDER BY id DESC LIMIT 1"
 	row := db.QueryRow(query, username)
 
 	var trip StartEnd
-	err := row.Scan(&trip.Username, &trip.TripStarted, &trip.TripStartTime, &trip.TripEndTime)
+	err := row.Scan(&trip.Username, &trip.TripStarted, &trip.TripStartTime, &trip.TripEndTime, &trip.OriginalTripStartTime)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil // No trip data found
@@ -345,19 +346,20 @@ func getTripData(db *sql.DB, username string) (*StartEnd, error) {
 
 func upsertTripData(db *sql.DB, startEnd StartEnd) error {
 	query := `
-		INSERT INTO trip (username, trip_started, trip_start_time, trip_end_time)
-		VALUES ($1, $2, $3, $4)
-		ON CONFLICT (username)
-		DO UPDATE SET trip_started = EXCLUDED.trip_started, trip_start_time = EXCLUDED.trip_start_time, trip_end_time = EXCLUDED.trip_end_time
-	`
+        INSERT INTO trip (username, trip_started, trip_start_time, trip_end_time, original_trip_start_time)
+        VALUES ($1, $2, $3, $4, $5)
+        ON CONFLICT (username)
+        DO UPDATE SET trip_started = EXCLUDED.trip_started, trip_start_time = EXCLUDED.trip_start_time, trip_end_time = EXCLUDED.trip_end_time, original_trip_start_time = EXCLUDED.original_trip_start_time
+    `
 
-	_, err := db.Exec(query, startEnd.Username, startEnd.TripStarted, startEnd.TripStartTime, startEnd.TripEndTime)
+	_, err := db.Exec(query, startEnd.Username, startEnd.TripStarted, startEnd.TripStartTime, startEnd.TripEndTime, startEnd.OriginalTripStartTime)
 	if err != nil {
 		return fmt.Errorf("failed to insert or update trip data: %w", err)
 	}
 
 	return nil
 }
+
 func handleStartTrip(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		defer r.Body.Close()
@@ -383,13 +385,32 @@ func handleStartTrip(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
+		existingTrip, err := getTripData(db, username)
+		if err != nil {
+			http.Error(w, "Failed to retrieve trip data: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		if existingTrip != nil && existingTrip.TripStarted {
+			// Trip is already started
+			http.Error(w, "Trip is already started", http.StatusConflict)
+			return
+		}
+
 		tripStartTime := time.Now()
+		var originalTripStartTime time.Time
+		if existingTrip != nil && existingTrip.OriginalTripStartTime != nil {
+			originalTripStartTime = *existingTrip.OriginalTripStartTime
+		} else {
+			originalTripStartTime = tripStartTime
+		}
 
 		startEnd := StartEnd{
-			Username:      username,
-			TripStarted:   true,
-			TripStartTime: &tripStartTime,
-			TripEndTime:   nil,
+			Username:              username,
+			TripStarted:           true,
+			TripStartTime:         &tripStartTime,
+			TripEndTime:           nil,
+			OriginalTripStartTime: &originalTripStartTime,
 		}
 
 		err = upsertTripData(db, startEnd)
@@ -471,10 +492,11 @@ func handleEndTrip(db *sql.DB) http.HandlerFunc {
 		tripEndTime := time.Now()
 
 		startEnd := StartEnd{
-			Username:      username,
-			TripStarted:   false,
-			TripStartTime: existingTrip.TripStartTime,
-			TripEndTime:   &tripEndTime,
+			Username:              username,
+			TripStarted:           false,
+			TripStartTime:         existingTrip.TripStartTime,
+			TripEndTime:           &tripEndTime,
+			OriginalTripStartTime: existingTrip.OriginalTripStartTime,
 		}
 
 		err = upsertTripData(db, startEnd)
@@ -518,18 +540,20 @@ func handleGetTripState(db *sql.DB) http.HandlerFunc {
 		}
 
 		var elapsedTime int64
-		if existingTrip.TripStarted && existingTrip.TripStartTime != nil {
-			elapsedTime = time.Since(*existingTrip.TripStartTime).Milliseconds()
+		if existingTrip.OriginalTripStartTime != nil {
+			elapsedTime = time.Since(*existingTrip.OriginalTripStartTime).Milliseconds()
 		}
 
 		response := struct {
-			TripStarted   bool      `json:"tripStarted"`
-			TripStartTime time.Time `json:"tripStartTime"`
-			ElapsedTime   int64     `json:"elapsedTime"`
+			TripStarted           bool      `json:"tripStarted"`
+			TripStartTime         time.Time `json:"tripStartTime"`
+			OriginalTripStartTime time.Time `json:"originalTripStartTime"`
+			ElapsedTime           int64     `json:"elapsedTime"`
 		}{
-			TripStarted:   existingTrip.TripStarted,
-			TripStartTime: *existingTrip.TripStartTime,
-			ElapsedTime:   elapsedTime,
+			TripStarted:           existingTrip.TripStarted,
+			TripStartTime:         *existingTrip.TripStartTime,
+			OriginalTripStartTime: *existingTrip.OriginalTripStartTime,
+			ElapsedTime:           elapsedTime,
 		}
 
 		responseBody, err := json.Marshal(response)
