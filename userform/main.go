@@ -393,7 +393,8 @@ func handleStartTrip(db *sql.DB) http.HandlerFunc {
 
 		if existingTrip != nil && existingTrip.TripStarted {
 			// Trip is already started
-			http.Error(w, "Trip is already started", http.StatusConflict)
+			w.WriteHeader(http.StatusConflict)
+			w.Write([]byte("Trip is already started"))
 			return
 		}
 
@@ -540,7 +541,7 @@ func handleGetTripState(db *sql.DB) http.HandlerFunc {
 		}
 
 		var elapsedTime int64
-		if existingTrip.OriginalTripStartTime != nil {
+		if existingTrip.TripStarted && existingTrip.OriginalTripStartTime != nil {
 			elapsedTime = time.Since(*existingTrip.OriginalTripStartTime).Milliseconds()
 		}
 
