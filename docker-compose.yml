@@ -51,7 +51,6 @@ services:
       DB_USER: binam
       DB_PASSWORD: Bhandari
       DB_NAME: binam
-      # MINIO_ENDPOINT: 172.17.0.1:9000
       MINIO_ENDPOINT: minio-server:9000
       MINIO_ACCESS_KEY: "DXeRSzJ1flBOehb5Bc1o"
       MINIO_SECRET_KEY: "tgCTzYPo8YeWzktmIl9A35PqR1TsiPN8wjOtslii"
@@ -65,8 +64,6 @@ services:
         condition: service_healthy
     networks:
       - app-network
-    volumes:
-      - ./:/app
 
   frontend:
     build:
@@ -74,17 +71,21 @@ services:
       dockerfile: Dockerfile
     ports:
       - "3000:80"
+    volumes:
+    - ./:/app
     networks:
       - app-network
-    volumes:
-      - ./:/app
 
 volumes:
   minio_data:
     driver: local
   postgres_data:
     external: true
+  userform_data:
+    driver: local
+  frontend_data:
+    driver: local
 
-networks: 
+networks:
   app-network:
     driver: bridge
