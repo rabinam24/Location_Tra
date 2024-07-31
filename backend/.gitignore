@@ -15,4 +15,13 @@ build/
 
 buildStaticReactVite
 dummy
+<<<<<<< HEAD
 uploads
+logs
+mydatabase.db
+bib.db
+test.db
+testing.db
+=======
+uploads
+>>>>>>> origin

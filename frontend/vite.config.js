@@ -1,10 +1,17 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
 
-// https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
   build: {
-    outDir:'buildStaticReactVite' //default build directory for react-vite is dist but this overwrites build directoty as buildStaticReactVite
-  }
-})
+    outDir: 'build',
+  },
+  server: {
+    open: true,
+  },
+  resolve: {
+    alias: {
+      '@': '/src',
+    },
+  },
+});

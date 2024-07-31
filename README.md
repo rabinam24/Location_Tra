@@ -12,6 +12,19 @@ Location tracker
 * Or Run : ```python main.py``` to run the main.py file in python
 ## b) Setup for Node Server
 * cd frontend
+<<<<<<< HEAD
+* install dependencies using npm install --force
+* run the project using npm run dev to start the node server
+## For Running the Flask Server
+* install virtual environment using python -m venv .venv
+* install packages using pip3 install -r requirements.txt
+* Run: flask --app main run to run the main.py file in flask
+## NodeJS version v20.12.2
+
+
+MINIO_ACCESS_KEY: "UYYDYFSGmUV3rEkxfdgo"
+MINIO_SECRET_KEY: "Q5uv1E7qZlkCd1cdw8ycwwFOfUuZeILn5rN2f68g"
+=======
 * install dependencies using: ```npm install --force```
 * run the project using ```npm run dev``` to start the node server
 ## For running the Main Application : Location Tracker
@@ -44,3 +57,4 @@ def serve_static(path):
 ## `Flask` verion Used: v3.0.3
 ## for avoiding Version and Dependecy conflict in this appliacation, set Dependabot alert in Github Repository, Use Docker for Application Dockerization
 > The quieter you become, the more you are able to hear
+>>>>>>> origin

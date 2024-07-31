@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+  <link rel="manifest" href="manifest.json">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Location Tracker</title>
+  <script type="module" crossorigin src="/assets/index-DSqCaxE2.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-SjzA5rgz.css">
+</head>
+<body>
+  <div id="root"></div>
+  <div id="modal-root"></div>
+
+  <!-- Add this script to register the service worker -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/firebase-messaging-sw.js')
+        .then((registration) => {
+          console.log('Service Worker registration successful with scope: ', registration.scope);
+        })
+        .catch((err) => {
+          console.log('Service Worker registration failed: ', err);
+        });
+    }
+    
+  </script>
+</body>
+</html>
