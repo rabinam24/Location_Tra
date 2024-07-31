@@ -13,10 +13,12 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
+	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	_ "github.com/lib/pq"
 	"github.com/minio/minio-go/v7"
@@ -344,6 +346,187 @@ func getTripData(db *sql.DB, username string) (*StartEnd, error) {
 	return &trip, nil
 }
 
+func handleTripStart(db *sql.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		defer c.Request.Body.Close()
+
+		body, err := io.ReadAll(c.Request.Body)
+
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		if err := c.ShouldBindJSON(&body); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		var RequestBody struct {
+			Username string `json:"username"`
+		}
+
+		if err := c.ShouldBindJSON(&RequestBody); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to get the username"})
+			return
+
+		}
+
+		existingTrip, err := getTripData(db, RequestBody.Username)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "unable to get the existing the trip"})
+			return
+		}
+
+		if existingTrip != nil && existingTrip.TripStarted {
+			c.JSON(http.StatusAccepted, gin.H{"response": "Trip already started"})
+			return
+		}
+
+		tripStartTime := time.Now()
+		var originalTripStartTime time.Time
+		if existingTrip != nil && existingTrip.OriginalTripStartTime != nil {
+			originalTripStartTime = *existingTrip.OriginalTripStartTime
+		} else {
+			originalTripStartTime = tripStartTime
+		}
+
+		startEnd := StartEnd{
+			Username:              RequestBody.Username,
+			TripStarted:           true,
+			TripStartTime:         &tripStartTime,
+			TripEndTime:           nil,
+			OriginalTripStartTime: &originalTripStartTime,
+		}
+
+		err = upsertTripData(db, startEnd)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		c.JSON(http.StatusAccepted, gin.H{"response": startEnd})
+		c.JSON(http.StatusAccepted, gin.H{"response": "Trip started successfully"})
+
+	}
+}
+
+func handleEndTrips(db *sql.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+
+		body, err := io.ReadAll(c.Request.Body)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		if err := c.ShouldBindJSON(&body); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		var requestBody struct {
+			Username string `json:"username"`
+		}
+
+		if err := c.ShouldBindJSON(&requestBody); err != nil {
+			c.JSON(http.StatusInternalServerError, "Username is missing")
+			return
+		}
+
+		existingTrip, err := getTripData(db, requestBody.Username)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get the trip data"})
+			return
+		}
+
+		if existingTrip == nil || !existingTrip.TripStarted {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": " NO Trip in progress"})
+			return
+		}
+
+		TripEndTime := time.Now()
+
+		startEnd := StartEnd{
+			Username:              requestBody.Username,
+			TripStarted:           false,
+			TripStartTime:         existingTrip.TripStartTime,
+			TripEndTime:           &TripEndTime,
+			OriginalTripStartTime: existingTrip.OriginalTripStartTime,
+		}
+
+		err = upsertTripData(db, startEnd)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		activeTripsMutex.Lock()
+		delete(activeTrips, requestBody.Username)
+		activeTripsMutex.Unlock()
+
+		c.JSON(http.StatusAccepted, gin.H{"response": "Successfully trip ended"})
+		c.JSON(http.StatusAccepted, gin.H{"response": startEnd})
+
+	}
+}
+
+func handleGetTripstates(db *sql.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+
+		var requestBody struct {
+			Username string `json:"username"`
+		}
+
+		if err := c.ShouldBindJSON(&requestBody); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Username is missing"})
+			return
+		}
+
+		body, err := io.ReadAll(c.Request.Body)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		if err := c.ShouldBindJSON(&body); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		existingTrip, err := getTripData(db, requestBody.Username)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "unable to find the trip data"})
+			return
+		}
+
+		if existingTrip == nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "no trip data found"})
+			return
+		}
+
+		var elapsedTime int64
+		if existingTrip.TripStarted && existingTrip.OriginalTripStartTime != nil {
+			elapsedTime = time.Since(*existingTrip.OriginalTripStartTime).Milliseconds()
+		}
+
+		response := struct {
+			TripStarted           bool      `json:"tripStarted"`
+			TripStartTime         time.Time `json:"tripStartTime"`
+			OriginalTripStartTime time.Time `json:"originalTripStartTime"`
+			ElapsedTime           int64     `json:"elapsedTime"`
+		}{
+			TripStarted:           existingTrip.TripStarted,
+			TripStartTime:         *existingTrip.TripStartTime,
+			OriginalTripStartTime: *existingTrip.OriginalTripStartTime,
+			ElapsedTime:           elapsedTime,
+		}
+
+		c.JSON(http.StatusAccepted, gin.H{"response": response})
+		c.JSON(http.StatusAccepted, gin.H{"response": "Successfully fetched the trip states"})
+
+	}
+}
+
 func upsertTripData(db *sql.DB, startEnd StartEnd) error {
 	query := `
         INSERT INTO trip (username, trip_started, trip_start_time, trip_end_time, original_trip_start_time)
@@ -587,13 +770,23 @@ func uploadToMinIO(minioClient *minio.Client, endpoint, bucketName string, objec
 
 	for i, data := range imageDatas {
 		reader := bytes.NewReader(data)
-		_, err := minioClient.PutObject(ctx, bucketName, objectNames[i], reader, int64(len(data)), minio.PutObjectOptions{
-			ContentType: "image/jpeg",
+		objectName := objectNames[i]
+		contentType := "application/octet-stream" // Default content type
+
+		// Determine content type based on the file extension
+		if strings.HasSuffix(objectName, ".jpg") || strings.HasSuffix(objectName, ".jpeg") {
+			contentType = "image/jpeg"
+		} else if strings.HasSuffix(objectName, ".png") {
+			contentType = "image/png"
+		}
+
+		_, err := minioClient.PutObject(ctx, bucketName, objectName, reader, int64(len(data)), minio.PutObjectOptions{
+			ContentType: contentType,
 		})
 		if err != nil {
 			return nil, err
 		}
-		imageURL := fmt.Sprintf("http://%s/%s/%s", endpoint, bucketName, objectNames[i])
+		imageURL := fmt.Sprintf("http://%s/%s/%s", endpoint, bucketName, objectName)
 		imageURLs = append(imageURLs, imageURL)
 	}
 

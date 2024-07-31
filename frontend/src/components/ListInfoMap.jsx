@@ -25,6 +25,7 @@ import {
   useMantineTheme,
 } from "@mantine/core";
 import axios from "axios";
+import { motion } from "framer-motion";
 
 const ListInfoMap = ({ locationData }) => {
   const headers = [
@@ -121,28 +122,34 @@ const ListInfoMap = ({ locationData }) => {
           breakpoints={[{ maxWidth: "sm", cols: 1 }]}
         >
           {headers.map((header) => (
-            <MantinePaper
+            <motion.div
               key={header}
-              shadow="xs"
-              radius="md"
-              p="md"
-              withBorder
-              style={{ backgroundColor: mantineTheme.colors.gray[0] }}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
             >
-              <Text
-                weight={700}
-                size="sm"
-                style={{
-                  color: mantineTheme.colors.blue[7],
-                  marginBottom: mantineTheme.spacing.xs,
-                }}
+              <MantinePaper
+                shadow="xs"
+                radius="md"
+                p="md"
+                withBorder
+                style={{ backgroundColor: mantineTheme.colors.gray[0] }}
               >
-                {header}
-              </Text>
-              <Text size="sm" style={{ color: mantineTheme.colors.dark[9] }}>
-                {renderCellContent(locationData, header)}
-              </Text>
-            </MantinePaper>
+                <Text
+                  weight={700}
+                  size="sm"
+                  style={{
+                    color: mantineTheme.colors.blue[7],
+                    marginBottom: mantineTheme.spacing.xs,
+                  }}
+                >
+                  {header}
+                </Text>
+                <Text size="sm" style={{ color: mantineTheme.colors.dark[9] }}>
+                  {renderCellContent(locationData, header)}
+                </Text>
+              </MantinePaper>
+            </motion.div>
           ))}
         </SimpleGrid>
       ) : (
@@ -179,15 +186,18 @@ const ListInfoMap = ({ locationData }) => {
                 sx={{ "&:last-child td, &:last-child th": { border: 0 } }}
               >
                 {headers.map((header) => (
-                  <TableCell
+                  <motion.td
                     key={header}
-                    sx={{
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.5 }}
+                    style={{
                       borderBottom: "1px solid rgba(224, 224, 224, 1)",
                       textAlign: "center",
                     }}
                   >
                     {renderCellContent(locationData, header)}
-                  </TableCell>
+                  </motion.td>
                 ))}
               </TableRow>
             </TableBody>
