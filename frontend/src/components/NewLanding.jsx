@@ -74,6 +74,13 @@ const gridVariants = {
   },
 };
 
+const RedButton = styled(AnimatedButton)`
+  background-color: #f44336;
+  &:hover {
+    background-color: #d32f2f;
+  }
+`;
+
 function NewLanding() {
   const [trip, setTrip] = useState({
     started: false,
@@ -235,6 +242,8 @@ function NewLanding() {
   const handleAuthClick = () => {
     setOpenAuthModal(true);
   };
+
+
 
   const handleAuthSuccess = (username) => {
     setIsAuthenticated(true);
@@ -532,13 +541,13 @@ function NewLanding() {
                 </Grid>
 
                 <Grid item>
-                  <AnimatedButton
+                  <RedButton
                     variants={buttonVariants}
                     whileHover="hover"
                     onClick={handleStopClick}
                   >
                     End Trip
-                  </AnimatedButton>
+                  </RedButton>
                 </Grid>
 
                 <Grid item>
