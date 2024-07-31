@@ -3,18 +3,19 @@ import axios from "axios";
 import {
   Table,
   Grid,
-  Text,
   Paper,
   ScrollArea,
   useMantineTheme,
   Container,
   SimpleGrid,
   Group,
+  Text,
+  Button as MantineButton,
+  Transition,
 } from "@mantine/core";
 import { useMediaQuery } from "@mantine/hooks";
-import "./listinfo.css";
-import "../ListInfo.css";
-import { Box, Button, Typography, Modal } from "@mui/material";
+import { Typography, Box, Button, Modal } from "@mui/material";
+import "./listinfo.css"; // Ensure you have this file for custom styles
 
 const style = {
   position: "absolute",
@@ -28,14 +29,12 @@ const style = {
   p: 4,
 };
 
-
 const List = () => {
   const [allInfo, setAllInfo] = useState([]);
   const [sortDirection, setSortDirection] = useState("asc");
   const [tableData, setTableData] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
-  // const [openModal, setOpenModal] = useState(false);
-  const [deleteId, setDeleteId] = useState(null); // State to store the ID of the item to be deleted
+  const [deleteId, setDeleteId] = useState(null);
   const rowsPerPage = 2;
 
   const theme = useMantineTheme();
@@ -44,7 +43,7 @@ const List = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await axios.get("http://localhost:8080//user-data");
+        const response = await axios.get("http://localhost:8080/user-data");
         setAllInfo(response.data);
       } catch (error) {
         console.error("Error fetching user data:", error);
@@ -140,10 +139,15 @@ const List = () => {
       case "Actions":
         return (
           <Button
-            variant="filled"
-            color="red"
-            className="delete-button"
+            variant="contained"
+            color="error"
+            size="small"
             onClick={() => handleDeleteClick(info.id)}
+            style={{
+              transition: "transform 0.3s ease-in-out",
+              "&:hover": { transform: "scale(1.1)" },
+            }}
+            className="delete-button"
           >
             Delete
           </Button>
@@ -158,9 +162,6 @@ const List = () => {
       <Grid justify="center">
         <Grid.Col span={12} md={10}>
           <Group position="apart" mb="md">
-            {/* <Text weight={500} size="lg" className="justify-center">
-              List of Entries
-            </Text> */}
           </Group>
           <Paper
             shadow="xs"
@@ -229,37 +230,53 @@ const List = () => {
                 </Table>
               ) : (
                 <SimpleGrid padding="xs" cols={1} spacing="xs">
-                  <Table style={{ width: "100%" }}>
-                    {currentRows.map((info, index) => (
-                      <Box
-                        key={index}
-                        p="md"
-                        mb="xs"
-                        style={{
-                          border: "1px solid #ddd",
-                          borderRadius: "5px",
-                        }}
-                      >
-                        {headers.map((header) => (
-                          <Box key={header} mb="sm">
-                            <Text weight={700} size="sm">
-                              {header}
-                            </Text>
-                            <Text size="sm">
-                              {renderCellContent(info, header)}
-                            </Text>
-                          </Box>
-                        ))}
-                        <Button
-                          variant="filled"
-                          color="error"
-                          onClick={() => handleDeleteClick(info.id)}
+                  {currentRows.map((info, index) => (
+                    <Transition
+                      key={index}
+                      mounted
+                      transition="slide-up"
+                      duration={500}
+                      timingFunction="ease"
+                    >
+                      {(styles) => (
+                        <Box
+                          key={index}
+                          p="md"
+                          mb="xs"
+                          style={{
+                            ...styles,
+                            border: "1px solid #ddd",
+                            borderRadius: "5px",
+                            boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.1)",
+                          }}
                         >
-                          Delete
-                        </Button>
-                      </Box>
-                    ))}
-                  </Table>
+                          {headers.map((header) => (
+                            <Box key={header} mb="sm">
+                              <Text weight={700} size="sm">
+                                {header}
+                              </Text>
+                              <Text size="sm">
+                                {renderCellContent(info, header)}
+                              </Text>
+                            </Box>
+                          ))}
+                          <Button
+                            variant="contained"
+                            color="error"
+                            size="small"
+                            onClick={() => handleDeleteClick(info.id)}
+                            style={{
+                              transition: "transform 0.3s ease-in-out",
+                              "&:hover": { transform: "scale(1.1)" },
+                            }}
+                            className="delete-button"
+                          >
+                            Delete
+                          </Button>
+                        </Box>
+                      )}
+                    </Transition>
+                  ))}
                 </SimpleGrid>
               )}
             </ScrollArea>
@@ -269,7 +286,7 @@ const List = () => {
               {Array.from(
                 { length: Math.ceil(tableData.length / rowsPerPage) },
                 (_, index) => (
-                  <Button
+                  <MantineButton
                     margin="5px"
                     key={index}
                     onClick={() => setCurrentPage(index + 1)}
@@ -277,7 +294,7 @@ const List = () => {
                     color="blue"
                   >
                     {index + 1}
-                  </Button>
+                  </MantineButton>
                 )
               )}
             </Group>
@@ -301,6 +318,7 @@ const List = () => {
               onClick={handleClose}
               variant="outlined"
               style={{ marginRight: "20px" }}
+              size="small"
             >
               No
             </Button>
@@ -309,6 +327,7 @@ const List = () => {
               className="delete-button"
               variant="contained"
               color="error"
+              size="small"
             >
               Delete
             </Button>
