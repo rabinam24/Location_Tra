@@ -69,10 +69,15 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    ports:
-      - "3000:80"
     volumes:
-    - ./:/app
+      - ./frontend:/app
+      - /app/node_modules
+      - ./certs:/app/certs
+    ports:
+      - "5173:80"
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+      - HTTPS=true
     networks:
       - app-network
 
