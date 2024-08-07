@@ -24,6 +24,7 @@ import (
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	"golang.org/x/crypto/bcrypt"
+	"golang.org/x/oauth2"
 )
 
 type config struct {
@@ -95,6 +96,52 @@ type AuthResponse struct {
 type TokenClaims struct {
 	Username string `json:"username"`
 	jwt.StandardClaims
+}
+
+var (
+	oauth2Config = &oauth2.Config{
+		ClientID:     "pole-finder",
+		ClientSecret: "a5951d903b5c",
+		Endpoint: oauth2.Endpoint{
+			AuthURL:  "https://oauth-staging.wlink.com.np/authorize",
+			TokenURL: "https://oauth-staging.wlink.com.np/oauth/token",
+		},
+		RedirectURL: "http://localhost:5174/callback",
+		Scopes:      []string{"openid", "profile"},
+	}
+	oauth2TokenURL = "https://oauth-staging.wlink.com.np/oauth/token"
+)
+
+func handleCallback(w http.ResponseWriter, r *http.Request) {
+	code := r.URL.Query().Get("code")
+	if code == "" {
+		http.Error(w, "Authorization code is missing", http.StatusBadRequest)
+		return
+	}
+
+	token, err := oauth2Config.Exchange(oauth2.NoContext, code)
+	if err != nil {
+		http.Error(w, "Failed to exchange token: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	client := oauth2Config.Client(oauth2.NoContext, token)
+	resp, err := client.Get("https://oauth-staging.wlink.com.np/userinfo")
+	if err != nil {
+		http.Error(w, "Failed to get user info: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	defer resp.Body.Close()
+
+	var userInfo map[string]interface{}
+	if err := json.NewDecoder(resp.Body).Decode(&userInfo); err != nil {
+		http.Error(w, "Failed to decode user info: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Handle user info and create session as needed
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(userInfo)
 }
 
 func handleWebSocketConnections(w http.ResponseWriter, r *http.Request) {
@@ -1292,6 +1339,7 @@ func main() {
 	http.HandleFunc("/login", handleUserLogin(db, cfg))
 	http.HandleFunc("/refresh-token", handleRefreshToken(cfg))
 	http.HandleFunc("/password-changer", handlePasswordChanger(db, cfg))
+	http.HandleFunc("/callback", handleCallback)
 
 	// CORS middleware
 	corsMiddleware := func(next http.Handler) http.Handler {
