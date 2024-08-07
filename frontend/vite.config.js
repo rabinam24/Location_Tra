@@ -9,7 +9,6 @@ const certPath = path.resolve(__dirname, "./certs");
 const keyPath = path.resolve(certPath, "server.key");
 const certFile = path.resolve(certPath, "server.cert");
 
-
 const httpsConfig =
   fs.existsSync(keyPath) && fs.existsSync(certFile)
     ? {
@@ -72,6 +71,14 @@ export default defineConfig({
     https: httpsConfig,
     host: "pole-finder.wlink.com.np",
     port: 5173,
+    proxy: {
+      '/oauth/token': {
+        target: 'https://oauth-staging.wlink.com.np',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/oauth\/token/, '/oauth/token'),
+        secure: false,
+      },
+    },
     middlewares: [
       (req, res, next) => {
         if (req.url.endsWith("sw.js")) {
