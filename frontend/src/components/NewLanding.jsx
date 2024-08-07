@@ -88,6 +88,7 @@ function NewLanding() {
     };
   }, []);
 
+
   useEffect(() => {
     const savedTrip = JSON.parse(localStorage.getItem("trip"));
     if (savedTrip && savedTrip.started) {
@@ -100,13 +101,24 @@ function NewLanding() {
 
   useEffect(() => {
     if (auth0IsAuthenticated && user) {
-      const clientName = "pole-finder"; // This is your client_name
-      localStorage.setItem("client_name", clientName);
-      setUsername(clientName);
-      setIsAuthenticated(true);
-      console.log("Client name set:", clientName);
+      const fetchUserInfo = async () => {
+        try {
+          const response = await axios.get("http://localhost:8080/callback");
+          const userInfo = response.data;
+          const userName = userInfo.name || userInfo.username || "pole-finder";
+          localStorage.setItem("username", userName);
+          setUsername(userName);
+          setIsAuthenticated(true);
+          console.log("Username set:", userName);
+        } catch (error) {
+          console.error("Error fetching user info:", error);
+        }
+      };
+  
+      fetchUserInfo();
     }
   }, [auth0IsAuthenticated, user]);
+  
 
   useEffect(() => {
     const intervalId = setInterval(async () => {
@@ -141,15 +153,17 @@ function NewLanding() {
     localStorage.setItem("activeComponent", activeComponent);
   }, [activeComponent]);
 
+
+
   const handleStartClick = async () => {
     try {
-      const clientName = localStorage.getItem("client_name");
-      if (!clientName) throw new Error("Client name is not defined");
+      const userName = localStorage.getItem("username");
+      if (!userName) throw new Error("user name is not defined");
   
-      console.log("Attempting to start trip with client name:", clientName);
+      console.log("Attempting to start trip with client name:", userName);
   
       const response = await axios.post("http://localhost:8080/start_trip", {
-        client_name: clientName,
+        username: userName,
       });
       if (response.status === 200) {
         console.log("Trip started successfully:", response.data);
@@ -159,7 +173,7 @@ function NewLanding() {
           startTime: currentTime,
           elapsedTime: 0,
           id: response.data.tripId,
-          client_name: clientName,
+          username: userName,
         });
         setActiveComponent("ADD_TRAVEL_LOG");
       } else {
@@ -172,14 +186,14 @@ function NewLanding() {
 
   const handleStopClick = async () => {
     try {
-      const clientName = localStorage.getItem("client_name");
-      if (!clientName) {
-        throw new Error("Client name is not defined in localStorage");
+      const userName = localStorage.getItem("username");
+      if (!userName) {
+        throw new Error("username name is not defined in localStorage");
       }
   
       const response = await axios.post(
         "http://localhost:8080/end_trip",
-        { client_name: clientName },
+        { username: userName },
         { headers: { "Content-Type": "application/json" } }
       );
   
@@ -189,7 +203,7 @@ function NewLanding() {
           startTime: null,
           elapsedTime: 0,
           id: null,
-          client_name: "",
+          username: "",
         });
         localStorage.removeItem("trip");
         if (intervalIdRef.current) {
