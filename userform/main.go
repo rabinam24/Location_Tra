@@ -11,6 +11,7 @@ import (
 	"log"
 	"math"
 	"net/http"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -19,11 +20,13 @@ import (
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
+	"github.com/gorilla/sessions"
 	"github.com/gorilla/websocket"
 	_ "github.com/lib/pq"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	"golang.org/x/crypto/bcrypt"
+	"golang.org/x/oauth2"
 )
 
 type config struct {
@@ -95,6 +98,119 @@ type AuthResponse struct {
 type TokenClaims struct {
 	Username string `json:"username"`
 	jwt.StandardClaims
+}
+
+var (
+	key   = []byte("MTK1ZWFKNZMTYMRLOS0ZMTQ2LTG1OGUTYJNLM2JHMJG4MZE1")
+	store = sessions.NewCookieStore(key)
+
+	oauth2Config = &oauth2.Config{
+		ClientID:     os.Getenv("pole-finder"),
+		ClientSecret: os.Getenv("a5951d903b5c"),
+		Endpoint: oauth2.Endpoint{
+			AuthURL:  "https://oauth-staging.wlink.com.np/authorize",
+			TokenURL: "https://oauth-staging.wlink.com.np/oauth/token",
+		},
+		RedirectURL: "https://pole-finder.wlink.com.np",
+		Scopes:      []string{"openid", "profile", "email"},
+	}
+	oauth2TokenURL = "https://oauth-staging.wlink.com.np/oauth/token"
+)
+
+func init() {
+	store.Options = &sessions.Options{
+		Path:     "/",
+		MaxAge:   int((time.Hour * 1).Seconds()), // Set the cookie expiry time
+		HttpOnly: true,                           // Prevents JavaScript from accessing the cookie
+		Secure:   true,                           // Ensure the cookie is only sent over HTTPS
+		SameSite: http.SameSiteLaxMode,           // Adjust according to your requirements
+	}
+}
+
+func corsMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
+}
+
+func handleCallback(w http.ResponseWriter, r *http.Request) {
+	code := r.URL.Query().Get("code")
+	if code == "" {
+		http.Error(w, "Authorization code is missing", http.StatusBadRequest)
+		return
+	}
+
+	token, err := oauth2Config.Exchange(oauth2.NoContext, code)
+	if err != nil {
+		http.Error(w, "Failed to exchange token: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	client := oauth2Config.Client(oauth2.NoContext, token)
+	resp, err := client.Get("https://oauth-staging.wlink.com.np/userinfo")
+	if err != nil {
+		http.Error(w, "Failed to get user info: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	defer resp.Body.Close()
+
+	var userInfo map[string]interface{}
+	if err := json.NewDecoder(resp.Body).Decode(&userInfo); err != nil {
+		http.Error(w, "Failed to decode user info: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Set the user info in session or cookie as required
+	session, _ := store.Get(r, "cookie-name")
+	session.Values["authenticated"] = true
+	session.Values["user_info"] = userInfo
+	session.Save(r, w)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(userInfo)
+}
+
+func login(w http.ResponseWriter, r *http.Request) {
+	url := oauth2Config.AuthCodeURL("state", oauth2.AccessTypeOffline)
+	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
+}
+
+func logout(w http.ResponseWriter, r *http.Request) {
+	session, _ := store.Get(r, "cookie-name")
+
+	// Revoke user's authentication locally
+	session.Values["authenticated"] = false
+	session.Save(r, w)
+
+	// Build the Auth0 logout URL
+	logoutURL := fmt.Sprintf("https://oauth-staging.wlink.com.np/v2/logout?client_id=%s&returnTo=%s",
+		oauth2Config.ClientID,
+		url.QueryEscape("https://pole-finder.wlink.com.np"))
+
+	// Redirect to Auth0 logout
+	http.Redirect(w, r, logoutURL, http.StatusTemporaryRedirect)
+}
+
+func secret(w http.ResponseWriter, r *http.Request) {
+	session, _ := store.Get(r, "cookie-name")
+
+	// Check if user is authenticated
+	if auth, ok := session.Values["authenticated"].(bool); !ok || !auth {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
+
+	// Print secret message
+	fmt.Fprintln(w, "The cake is a lie!")
 }
 
 func handleWebSocketConnections(w http.ResponseWriter, r *http.Request) {
@@ -1218,7 +1334,6 @@ func connectDB(cfg config) (*sql.DB, error) {
 	}
 	return db, nil
 }
-
 func main() {
 	// Initialize MinIO client
 	endpoint := os.Getenv("MINIO_ENDPOINT")
@@ -1278,26 +1393,31 @@ func main() {
 
 	// Set up HTTP handlers with required parameters
 	bucketName := "location-tracker"
-	http.HandleFunc("/submit-form", handleFormData(db, minioClient, bucketName, endpoint))
-	http.HandleFunc("/user-data", handleUserData(db))
-	http.HandleFunc("/api/data/", handleDeleteData(db))
-	http.HandleFunc("/api/gps-data", handlegetGpsData(db))
-	http.HandleFunc("/api/pole-image", handleUserPoleImage(db))
-	http.HandleFunc("/ws", handleWebSocketConnections)
-	http.HandleFunc("/start_trip", handleStartTrip(db))
-	http.HandleFunc("/end_trip", handleEndTrip(db))
-	http.HandleFunc("/get_trip_state", handleGetTripState(db))
-	http.HandleFunc("/total-distances", handleTotalDistances(db))
-	http.HandleFunc("/sign-up", handleUserSignup(db))
-	http.HandleFunc("/login", handleUserLogin(db, cfg))
-	http.HandleFunc("/refresh-token", handleRefreshToken(cfg))
-	http.HandleFunc("/password-changer", handlePasswordChanger(db, cfg))
+	mux := http.NewServeMux()
+	mux.HandleFunc("/submit-form", handleFormData(db, minioClient, bucketName, endpoint))
+	mux.HandleFunc("/user-data", handleUserData(db))
+	mux.HandleFunc("/api/data/", handleDeleteData(db))
+	mux.HandleFunc("/api/gps-data", handlegetGpsData(db))
+	mux.HandleFunc("/api/pole-image", handleUserPoleImage(db))
+	mux.HandleFunc("/ws", handleWebSocketConnections)
+	mux.HandleFunc("/start_trip", handleStartTrip(db))
+	mux.HandleFunc("/end_trip", handleEndTrip(db))
+	mux.HandleFunc("/get_trip_state", handleGetTripState(db))
+	mux.HandleFunc("/total-distances", handleTotalDistances(db))
+	mux.HandleFunc("/sign-up", handleUserSignup(db))
+	mux.HandleFunc("/logins", handleUserLogin(db, cfg))
+	mux.HandleFunc("/refresh-token", handleRefreshToken(cfg))
+	mux.HandleFunc("/password-changer", handlePasswordChanger(db, cfg))
+	mux.HandleFunc("/callback", handleCallback)
+	mux.HandleFunc("/login", login)
+	mux.HandleFunc("/logout", logout)
+	mux.HandleFunc("/secret", secret)
 
 	// CORS middleware
 	corsMiddleware := func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Access-Control-Allow-Origin", "*")
-			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE")
+			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
 			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 
 			if r.Method == http.MethodOptions {
@@ -1309,7 +1429,7 @@ func main() {
 		})
 	}
 
-	handler := corsMiddleware(http.DefaultServeMux)
+	handler := corsMiddleware(mux)
 
 	// Start the server
 	fmt.Println("Server is running on :8080")

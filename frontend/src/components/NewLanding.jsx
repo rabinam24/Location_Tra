@@ -8,40 +8,25 @@ import {
   DialogContentText,
   DialogTitle,
 } from "@mui/material";
+import axios from "axios";
+import styled from "@emotion/styled";
+import { motion } from "framer-motion";
+import { useAuth0 } from "@auth0/auth0-react";
 import Form from "./FormInput";
 import HorizontalBars from "./Dashboard";
 import Home from "../Routes/Homepage";
-import axios from "axios";
 import MapWithWebSocket from "./MapComponent";
+import GoogleButton from "./GoogleButton";
 import "../Newlanding.css";
 import "./authen.css";
-import { useForm } from "@mantine/form";
-import {
-  TextInput,
-  PasswordInput,
-  Text,
-  Paper,
-  Group,
-  Divider,
-  Checkbox,
-  Anchor,
-  Stack,
-  Alert,
-} from "@mantine/core";
-import { useToggle, upperFirst } from "@mantine/hooks";
-import { IconAlertCircle, IconCheck } from "@tabler/icons-react";
-import GoogleButton from "./GoogleButton";
-import GitHubButton from "./GithubButton";
-import { css } from "@emotion/react";
-import styled from "@emotion/styled";
-import { motion } from "framer-motion";
+import { Paper, Text, Group } from "@mantine/core";
 
 const AnimatedGrid = styled(motion.div)`
   display: flex;
   justify-content: center;
   margin-top: 30px;
   margin: 10px;
-  gap: 7px
+  gap: 7px;
 `;
 
 const AnimatedButton = styled(motion.button)`
@@ -92,16 +77,17 @@ function NewLanding() {
   const [activeComponent, setActiveComponent] = useState(null);
   const intervalIdRef = useRef(null);
   const [openModal, setOpenModal] = useState(false);
-  const [openAuthModal, setOpenAuthModal] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [authMessage, setAuthMessage] = useState({ type: null, content: "" });
   const [username, setUsername] = useState("");
+
+  const { loginWithRedirect, user, isAuthenticated: auth0IsAuthenticated } = useAuth0();
 
   useEffect(() => {
     window.onbeforeunload = () => {
       window.scrollTo(0, 0);
     };
   }, []);
+
 
   useEffect(() => {
     const savedTrip = JSON.parse(localStorage.getItem("trip"));
@@ -114,9 +100,33 @@ function NewLanding() {
   }, []);
 
   useEffect(() => {
+    if (auth0IsAuthenticated && user) {
+      const fetchUserInfo = async () => {
+        try {
+          const response = await axios.get("http://localhost:8080/callback");
+          const userInfo = response.data;
+          const userName = userInfo.name || userInfo.username || "pole-finder";
+          localStorage.setItem("username", userName);
+          setUsername(userName);
+          setIsAuthenticated(true);
+          console.log("Username set:", userName);
+        } catch (error) {
+          console.error("Error fetching user info:", error);
+        }
+      };
+  
+      fetchUserInfo();
+    }
+  }, [auth0IsAuthenticated, user]);
+  
+
+  useEffect(() => {
     const intervalId = setInterval(async () => {
       try {
-        const response = await axios.post("http://localhost:8080/get_trip_state", { username });
+        const response = await axios.post(
+          "http://localhost:8080/get_trip_state",
+          { username }
+        );
         if (response.status === 200) {
           const tripData = response.data;
           setTrip({
@@ -124,14 +134,14 @@ function NewLanding() {
             startTime: new Date(tripData.tripStartTime),
             elapsedTime: tripData.elapsedTime,
             id: tripData.tripId,
-            username: username,
+            username,
           });
         }
       } catch (error) {
         console.error("Error polling trip status:", error);
       }
-    }, 5000); 
-  
+    }, 115000);
+
     return () => clearInterval(intervalId);
   }, [username]);
 
@@ -143,69 +153,75 @@ function NewLanding() {
     localStorage.setItem("activeComponent", activeComponent);
   }, [activeComponent]);
 
-  useEffect(() => {
-    console.log("Authentication state changed:", isAuthenticated);
-  }, [isAuthenticated]);
 
-  useEffect(() => {
-    const storedUsername = localStorage.getItem("username");
-    if (storedUsername && storedUsername !== "undefined") {
-      setUsername(storedUsername);
-      setIsAuthenticated(true);
-    }
-  }, []);
-
-  useEffect(() => {
-    console.log("Username updated:", username);
-  }, [username]);
 
   const handleStartClick = async () => {
     try {
-        const storedUsername = localStorage.getItem("username");
-        if (!storedUsername) throw new Error("Username is not defined");
+      const userName = localStorage.getItem("username");
+      if (!userName) throw new Error("user name is not defined");
   
-        const response = await axios.post("http://localhost:8080/start_trip", { username: storedUsername });
-        if (response.status === 200) {
-            const currentTime = new Date();
-            setTrip({
-                started: true,
-                startTime: currentTime,
-                elapsedTime: 0,
-                id: response.data.tripId,
-                username: storedUsername,
-            });
-            setActiveComponent("ADD_TRAVEL_LOG");
-        }
+      console.log("Attempting to start trip with client name:", userName);
+  
+      const response = await axios.post("http://localhost:8080/start_trip", {
+        username: userName,
+      });
+      if (response.status === 200) {
+        console.log("Trip started successfully:", response.data);
+        const currentTime = new Date();
+        setTrip({
+          started: true,
+          startTime: currentTime,
+          elapsedTime: 0,
+          id: response.data.tripId,
+          username: userName,
+        });
+        setActiveComponent("ADD_TRAVEL_LOG");
+      } else {
+        console.error("Error starting trip: Unexpected response status", response.status);
+      }
     } catch (error) {
-        console.error("Error starting trip:", error);
+      console.error("Error starting trip:", error);
     }
   };
 
   const handleStopClick = async () => {
     try {
-      const storedUsername = localStorage.getItem("username");
-      if (!storedUsername) {
-        throw new Error("Username is not defined in localStorage");
+      const userName = localStorage.getItem("username");
+      if (!userName) {
+        throw new Error("username name is not defined in localStorage");
       }
   
       const response = await axios.post(
         "http://localhost:8080/end_trip",
-        { username: storedUsername },
+        { username: userName },
         { headers: { "Content-Type": "application/json" } }
       );
   
       if (response.status === 200) {
-        setTrip({ started: false, startTime: null, elapsedTime: 0, id: null, username: "" });
+        setTrip({
+          started: false,
+          startTime: null,
+          elapsedTime: 0,
+          id: null,
+          username: "",
+        });
         localStorage.removeItem("trip");
         if (intervalIdRef.current) {
           clearInterval(intervalIdRef.current);
         }
         setActiveComponent(null);
+      } else {
+        console.error("Error ending trip: Unexpected response status", response.status);
       }
     } catch (error) {
-      console.error("Error ending trip:", error.response ? error.response.data : error.message);
+      console.error(
+        "Error ending trip:",
+        error.response ? error.response.data : error.message
+      );
       if (error.response && error.response.status === 409) {
-        alert("No active trip found. Please ensure a trip is in progress before trying to end it.");
+        alert(
+          "No active trip found. Please ensure a trip is in progress before trying to end it."
+        );
       }
     }
   };
@@ -221,7 +237,7 @@ function NewLanding() {
     } else {
       clearInterval(intervalIdRef.current);
     }
-  
+
     return () => clearInterval(intervalIdRef.current);
   }, [trip.started, trip.startTime]);
 
@@ -229,7 +245,7 @@ function NewLanding() {
     const seconds = Math.floor(elapsedTime / 1000) % 60;
     const minutes = Math.floor(elapsedTime / (1000 * 60)) % 60;
     const hours = Math.floor(elapsedTime / (1000 * 60 * 60));
-  
+
     return `${hours}h: ${minutes}m: ${seconds}s`;
   };
 
@@ -239,200 +255,34 @@ function NewLanding() {
     );
   };
 
-  const handleAuthClick = () => {
-    setOpenAuthModal(true);
+  const handleGoogleLogin = () => {
+    loginWithRedirect({
+      connection: "google-oauth2",
+    });
   };
-
-
 
   const handleAuthSuccess = (username) => {
     setIsAuthenticated(true);
     setUsername(username);
     localStorage.setItem("username", username);
-    setOpenAuthModal(false);
     setOpenModal(true);
     console.log("This is the username", username);
   };
 
-  const AuthenticationForm = () => {
-    const [type, toggle] = useToggle(["login", "register"]);
-    const form = useForm({
-      initialValues: {
-        email: "",
-        username: "",
-        phone: "",
-        password: "",
-        terms: true,
-      },
-      validate: {
-        password: (val) =>
-          val.length <= 6
-            ? "Password should include at least 6 characters"
-            : null,
-      },
-    });
-  
-    const handleSubmit = async (values) => {
-      console.log("handleSubmit called with values:", values);
-      try {
-        if (type === "register") {
-          await axios.post("http://localhost:8080/sign-up", {
-            username: values.username,
-            email: values.email,
-            phone: values.phone,
-            password: values.password,
-          });
-          
-          setAuthMessage({
-            type: "success",
-            content: "Registration successful. Please log in.",
-          });
-          toggle();
-          form.reset();
-          setTimeout(() => {
-            setAuthMessage({ type: null, content: "" });
-          }, 2000);
-        } else {
-          console.log("Sending login request with:", values.username, values.password);
-          console.log("Axios instance:", axios);
-          
-          axios.post("http://localhost:8080/login", 
-            {
-              username: values.username,
-              password: values.password,
-            },
-            {
-              headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-              },
-            }
-          )
-          .then(response => {
-            console.log("Login response received:", response.data);
-            const { access_token, refresh_token } = response.data;
-            const tokens = {
-              access: access_token,
-              refresh: refresh_token,
-            };
-            localStorage.setItem("authTokens", JSON.stringify(tokens));
-            handleAuthSuccess(values.username);
-          })
-          .catch(error => {
-            console.error("Error during login:", error);
-            if (error.response) {
-              setAuthMessage({ type: "error", content: error.response.data.error });
-            } else {
-              setAuthMessage({ type: "error", content: "An error occurred. Please try again." });
-            }
-          });
-        }
-      } catch (error) {
-        console.error("Error during authentication:", error);
-        setAuthMessage({
-          type: "error",
-          content: error.response ? error.response.data.error : "An error occurred. Please try again.",
-        });
-      }
-    };
-
-    return (
-      <div className="authentication-form">
-        <Paper radius="md" p="xl" withBorder>
-          <Text size="lg" weight={500}>
-            Welcome to Trip Logger, {type} with
-          </Text>
-  
-          <Group grow mb="md" mt="md">
-            <GoogleButton radius="xl">Google</GoogleButton>
-            <GitHubButton radius="xl">GitHub</GitHubButton>
-          </Group>
-  
-          <Divider label="Or continue with email" labelPosition="center" my="lg" />
-  
-          <form onSubmit={form.onSubmit(handleSubmit)}>
-            <Stack>
-              {type === "register" && (
-                <>
-                  <TextInput
-                    label="Email"
-                    placeholder="hello@mantine.dev"
-                    value={form.values.email}
-                    onChange={(event) =>
-                      form.setFieldValue("email", event.currentTarget.value)
-                    }
-                  />
-                  <TextInput
-                    label="Phone"
-                    placeholder="Your phone number"
-                    value={form.values.phone}
-                    onChange={(event) =>
-                      form.setFieldValue("phone", event.currentTarget.value)
-                    }
-                  />
-                </>
-              )}
-
-              <TextInput
-                    label="Username"
-                    placeholder="Your username"
-                    value={form.values.username}
-                    onChange={(event) =>
-                      form.setFieldValue("username", event.currentTarget.value)
-                    }
-                  />
-  
-              <PasswordInput
-                label="Password"
-                placeholder="Your password"
-                value={form.values.password}
-                onChange={(event) =>
-                  form.setFieldValue("password", event.currentTarget.value)
-                }
-                error={form.errors.password && "Password should include at least 6 characters"}
-              />
-  
-              {type === "register" && (
-                <Checkbox
-                  label="I accept terms and conditions"
-                  checked={form.values.terms}
-                  onChange={(event) =>
-                    form.setFieldValue("terms", event.currentTarget.checked)
-                  }
-                />
-              )}
-            </Stack>
-  
-            {authMessage.type && (
-              <Alert
-                icon={authMessage.type === "error" ? <IconAlertCircle size="1rem" /> : <IconCheck size="1rem" />}
-                title={authMessage.type === "error" ? "Error" : "Success"}
-                color={authMessage.type === "error" ? "red" : "teal"}
-                mt="md"
-              >
-                {authMessage.content}
-              </Alert>
-            )}
-  
-            <Group position="apart" mt="xl">
-              <Anchor
-                component="button"
-                type="button"
-                color="dimmed"
-                onClick={() => toggle()}
-                size="xs"
-              >
-                {type === "register"
-                  ? "Already have an account? Login"
-                  : "Don't have an account? Register"}
-              </Anchor>
-              <Button type="submit">{upperFirst(type)}</Button>
-            </Group>
-          </form>
-        </Paper>
-      </div>
-    );
-  };
+  const renderAuthForm = () => (
+    <div className="authentication-form">
+      <Paper radius="md" p="xl" withBorder>
+        <Text size="lg" weight={500}>
+          Welcome to Trip Logger
+        </Text>
+        <Group grow mb="md" mt="md">
+          <GoogleButton radius="xl" onClick={handleGoogleLogin}>
+            Wordlink
+          </GoogleButton>
+        </Group>
+      </Paper>
+    </div>
+  );
 
   return (
     <>
@@ -440,18 +290,23 @@ function NewLanding() {
         <Grid item xs={12} sm={6}>
           {!trip.started && (
             <>
-              <AnimatedGrid
-                initial="hidden"
-                animate="visible"
-                variants={gridVariants}
-              >
+              <AnimatedGrid initial="hidden" animate="visible" variants={gridVariants}>
                 <Grid item>
                   <AnimatedButton
                     variants={buttonVariants}
                     whileHover="hover"
-                    onClick={handleAuthClick}
+                    onClick={handleGoogleLogin}
                   >
-                    Start The Trip
+                    Login
+                  </AnimatedButton>
+                </Grid>
+                <Grid item>
+                  <AnimatedButton
+                    variants={buttonVariants}
+                    whileHover="hover"
+                    onClick={() => setOpenModal(true)}
+                  >
+                    Start Trip
                   </AnimatedButton>
                 </Grid>
                 <Grid item>
@@ -469,45 +324,35 @@ function NewLanding() {
                     whileHover="hover"
                     onClick={() => toggleComponent("USER_MAP")}
                   >
-                    Show Map
+                    User Map
                   </AnimatedButton>
                 </Grid>
               </AnimatedGrid>
-
-              <Dialog
-                open={openAuthModal}
-                onClose={() => setOpenAuthModal(false)}
-                maxWidth="sm"
-                fullWidth
-              >
-                <DialogContent>
-                  <AuthenticationForm />
-                </DialogContent>
-              </Dialog>
-
-              <Dialog
-                open={openModal}
-                onClose={() => setOpenModal(false)}
-                aria-labelledby="alert-dialog-title"
-                aria-describedby="alert-dialog-description"
-              >
-                <DialogTitle id="alert-dialog-title">
-                  {"Start The Trip"}
-                </DialogTitle>
-                <DialogContent>
-                  <DialogContentText id="alert-dialog-description">
-                    Are you sure you want to start the trip?
-                  </DialogContentText>
-                </DialogContent>
-                <DialogActions>
-                  <Button onClick={() => setOpenModal(false)} color="primary">
-                    No
-                  </Button>
-                  <Button onClick={handleStartClick} color="primary" autoFocus>
-                    Yes
-                  </Button>
-                </DialogActions>
-              </Dialog>
+              {openModal && (
+                <Dialog
+                  open={openModal}
+                  onClose={() => setOpenModal(false)}
+                  aria-labelledby="alert-dialog-title"
+                  aria-describedby="alert-dialog-description"
+                >
+                  <DialogTitle id="alert-dialog-title">
+                    {"Start Trip Confirmation"}
+                  </DialogTitle>
+                  <DialogContent>
+                    <DialogContentText id="alert-dialog-description">
+                      Are you sure you want to start the trip?
+                    </DialogContentText>
+                  </DialogContent>
+                  <DialogActions>
+                    <Button onClick={() => setOpenModal(false)} color="primary">
+                      No
+                    </Button>
+                    <Button onClick={handleStartClick} color="primary" autoFocus>
+                      Yes
+                    </Button>
+                  </DialogActions>
+                </Dialog>
+              )}
             </>
           )}
 
@@ -523,11 +368,7 @@ function NewLanding() {
                 </span>
               </p>
 
-              <AnimatedGrid
-                initial="hidden"
-                animate="visible"
-                variants={gridVariants}
-              >
+              <AnimatedGrid initial="hidden" animate="visible" variants={gridVariants}>
                 <Grid item>
                   <AnimatedButton
                     variants={buttonVariants}
@@ -539,7 +380,6 @@ function NewLanding() {
                       : "Show Travel Log"}
                   </AnimatedButton>
                 </Grid>
-
                 <Grid item>
                   <RedButton
                     variants={buttonVariants}
@@ -549,7 +389,6 @@ function NewLanding() {
                     End Trip
                   </RedButton>
                 </Grid>
-
                 <Grid item>
                   <AnimatedButton
                     variants={buttonVariants}
@@ -561,14 +400,13 @@ function NewLanding() {
                       : "Show Travel Log Details"}
                   </AnimatedButton>
                 </Grid>
-
                 <Grid item>
                   <AnimatedButton
                     variants={buttonVariants}
                     whileHover="hover"
                     onClick={() => toggleComponent("USER_MAP_DETAILS")}
                   >
-                    {activeComponent === "USER_MAP__DETAILS"
+                    {activeComponent === "USER_MAP_DETAILS"
                       ? "Hide User Map Details"
                       : "Show User Map Details"}
                   </AnimatedButton>

@@ -1,31 +1,27 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useForm } from "@mantine/form";
+import { useAuth0 } from '@auth0/auth0-react';
 import {
   TextInput,
   PasswordInput,
   Text,
   Paper,
   Group,
-  Button,
   Divider,
   Checkbox,
   Anchor,
   Stack,
-  useMantineTheme,
   Alert,
 } from "@mantine/core";
-import { useToggle, upperFirst } from "@mantine/hooks";
-import { IconAlertCircle, IconCheck } from "@tabler/icons-react";
-import api from "./AuthenticationAPI";
+import { Button } from "@mui/material";
 import GoogleButton from "./GoogleButton";
-import GitHubButton from "./GithubButton";
-import "./authen.css";
+import axios from 'axios';
+import { IconAlertCircle, IconCheck } from "@tabler/icons-react";
 
-const AuthenticationForm = (props) => {
+const AuthenticationForm = ({ handleAuthSuccess }) => {
   const [type, toggle] = useToggle(["login", "register"]);
-  const theme = useMantineTheme();
-  const [message, setMessage] = useState({ type: null, content: "" });
-
+  const [authMessage, setAuthMessage] = useState({ type: null, content: "" });
+  const { loginWithRedirect } = useAuth0();
   const form = useForm({
     initialValues: {
       email: "",
@@ -35,7 +31,6 @@ const AuthenticationForm = (props) => {
       terms: true,
     },
     validate: {
-      email: (val) => (/^\S+@\S+$/.test(val) ? null : "Invalid email"),
       password: (val) =>
         val.length <= 6
           ? "Password should include at least 6 characters"
@@ -43,185 +38,147 @@ const AuthenticationForm = (props) => {
     },
   });
 
-  useEffect(() => {
-    if (message.type === "success") {
-      const timer = setTimeout(() => {
-        setMessage({ type: null, content: "" });
-      }, 2000);
-      return () => clearTimeout(timer);
-    }
-  }, [message]);
-
   const handleSubmit = async (values) => {
     try {
       if (type === "register") {
-        await api.post("/sign-up", {
+        await axios.post("http://localhost:8080/sign-up", {
           username: values.username,
           email: values.email,
           phone: values.phone,
           password: values.password,
         });
-
-        setMessage({
+        setAuthMessage({
           type: "success",
           content: "Registration successful. Please log in.",
         });
         toggle();
         form.reset();
+        setTimeout(() => {
+          setAuthMessage({ type: null, content: "" });
+        }, 2000);
       } else {
-        const response = await api.post("/login", {
+        const response = await axios.post("http://localhost:8080/login", {
           username: values.username,
           password: values.password,
         });
-        console.log("Sending login request with:", values.username, values.password);
-        
-        if (response && response.data) {
-          const { access_token, refresh_token } = response.data;
-
-          localStorage.setItem("accessToken", access_token);
-          localStorage.setItem("refreshToken", refresh_token);
-
-          api.defaults.headers.common[
-            "Authorization"
-          ] = `Bearer ${access_token}`;
-
-          setMessage({
-            type: "success",
-            content: "Login successful. Welcome back!",
-          });
-          form.reset();
-        } else {
-          throw new Error("Login response does not contain data");
-        }
+        const { access_token, refresh_token } = response.data;
+        const tokens = {
+          access: access_token,
+          refresh: refresh_token,
+        };
+        localStorage.setItem("authTokens", JSON.stringify(tokens));
+        handleAuthSuccess(values.username);
       }
     } catch (error) {
-      console.error("Error during authentication:", error);
-      setMessage({
+      setAuthMessage({
         type: "error",
-        content:
-          type === "register"
-            ? "Registration failed. Please try again."
-            : "Login failed. Please check your credentials.",
+        content: error.response ? error.response.data.error : "An error occurred. Please try again.",
       });
     }
   };
 
+  const handleGoogleLogin = () => {
+    loginWithRedirect({
+      connection: 'google-oauth2',
+    });
+  };
+
   return (
-    <Paper
-      radius="md"
-      p={{ base: "md", sm: "xl" }}
-      withBorder
-      style={{
-        maxWidth: 400,
-        margin: "auto",
-      }}
-      {...props}
-    >
-      <Text size="lg" weight={500}>
-        Welcome , {type} with
-      </Text>
+    <div className="authentication-form">
+      <Paper radius="md" p="xl" withBorder>
+        <Text size="lg" weight={500}>
+          Welcome to Trip Logger, {type} with
+        </Text>
 
-      <Group grow mb="md" mt="md">
-        <GoogleButton radius="xl">Google</GoogleButton>
-        <GitHubButton radius="xl">GitHub</GitHubButton>
-      </Group>
+        <Group grow mb="md" mt="md">
+          <GoogleButton radius="xl" onClick={handleGoogleLogin}>
+            Google
+          </GoogleButton>
+        </Group>
 
-      <Divider label="Or continue with email" labelPosition="center" my="lg" />
+        <Divider label="Or continue with email" labelPosition="center" my="lg" />
 
-      <form onSubmit={form.onSubmit(handleSubmit)}>
-        <Stack>
-          {type === "register" && (
-            <>
-              <TextInput
-                required
-                label="Email"
-                placeholder="hello@mantine.dev"
-                value={form.values.email}
-                onChange={(event) =>
-                  form.setFieldValue("email", event.currentTarget.value)
-                }
-                error={form.errors.email && "Invalid email"}
-              />
-              <TextInput
-                required
-                label="Phone"
-                placeholder="9862220888"
-                value={form.values.phone}
-                onChange={(event) =>
-                  form.setFieldValue("phone", event.currentTarget.value)
-                }
-              />
-            </>
-          )}
+        <form onSubmit={form.onSubmit(handleSubmit)}>
+          <Stack>
+            {type === "register" && (
+              <>
+                <TextInput
+                  label="Email"
+                  placeholder="hello@mantine.dev"
+                  value={form.values.email}
+                  onChange={(event) =>
+                    form.setFieldValue("email", event.currentTarget.value)
+                  }
+                />
+                <TextInput
+                  label="Phone"
+                  placeholder="Your phone number"
+                  value={form.values.phone}
+                  onChange={(event) =>
+                    form.setFieldValue("phone", event.currentTarget.value)
+                  }
+                />
+              </>
+            )}
 
-          <TextInput
-            required
-            label="Username"
-            placeholder="Username"
-            value={form.values.username}
-            onChange={(event) =>
-              form.setFieldValue("username", event.currentTarget.value)
-            }
-          />
-
-          <PasswordInput
-            required
-            label="Password"
-            placeholder="Your password"
-            value={form.values.password}
-            onChange={(event) =>
-              form.setFieldValue("password", event.currentTarget.value)
-            }
-            error={
-              form.errors.password &&
-              "Password should include at least 6 characters"
-            }
-          />
-
-          {type === "register" && (
-            <Checkbox
-              label="I accept terms and conditions"
-              checked={form.values.terms}
+            <TextInput
+              label="Username"
+              placeholder="Your username"
+              value={form.values.username}
               onChange={(event) =>
-                form.setFieldValue("terms", event.currentTarget.checked)
+                form.setFieldValue("username", event.currentTarget.value)
               }
             />
+
+            <PasswordInput
+              label="Password"
+              placeholder="Your password"
+              value={form.values.password}
+              onChange={(event) =>
+                form.setFieldValue("password", event.currentTarget.value)
+              }
+              error={form.errors.password && "Password should include at least 6 characters"}
+            />
+
+            {type === "register" && (
+              <Checkbox
+                label="I accept terms and conditions"
+                checked={form.values.terms}
+                onChange={(event) =>
+                  form.setFieldValue("terms", event.currentTarget.checked)
+                }
+              />
+            )}
+          </Stack>
+
+          {authMessage.type && (
+            <Alert
+              icon={authMessage.type === "error" ? <IconAlertCircle size="1rem" /> : <IconCheck size="1rem" />}
+              title={authMessage.type === "error" ? "Error" : "Success"}
+              color={authMessage.type === "error" ? "red" : "teal"}
+              mt="md"
+            >
+              {authMessage.content}
+            </Alert>
           )}
-        </Stack>
 
-        <Group position="apart" mt="xl">
-          <Anchor
-            component="button"
-            type="button"
-            color="dimmed"
-            onClick={() => toggle()}
-            size="xs"
-          >
-            {type === "register"
-              ? "Already have an account? Login"
-              : "Don't have an account? Register"}
-          </Anchor>
-          <Button type="submit">{upperFirst(type)}</Button>
-        </Group>
-      </form>
-
-      {message.type && (
-        <Alert
-          icon={
-            message.type === "success" ? (
-              <IconCheck size="1rem" />
-            ) : (
-              <IconAlertCircle size="1rem" />
-            )
-          }
-          title={upperFirst(message.type)}
-          color={message.type === "success" ? "green" : "red"}
-          mt="md"
-        >
-          {message.content}
-        </Alert>
-      )}
-    </Paper>
+          <Group position="apart" mt="xl">
+            <Anchor
+              component="button"
+              type="button"
+              color="dimmed"
+              onClick={() => toggle()}
+              size="xs"
+            >
+              {type === "register"
+                ? "Already have an account? Login"
+                : "Don't have an account? Register"}
+            </Anchor>
+            <Button type="submit">{upperFirst(type)}</Button>
+          </Group>
+        </form>
+      </Paper>
+    </div>
   );
 };
 
