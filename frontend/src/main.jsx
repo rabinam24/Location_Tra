@@ -22,6 +22,7 @@ if ('serviceWorker' in navigator) {
   });
 }
 
+
 root.render(
   <React.StrictMode>
     <Auth0Provider

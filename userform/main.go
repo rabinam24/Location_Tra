@@ -11,6 +11,7 @@ import (
 	"log"
 	"math"
 	"net/http"
+	"net/http/httputil"
 	"net/url"
 	"os"
 	"strconv"
@@ -105,27 +106,16 @@ var (
 	store = sessions.NewCookieStore(key)
 
 	oauth2Config = &oauth2.Config{
-		ClientID:     os.Getenv("pole-finder"),
-		ClientSecret: os.Getenv("a5951d903b5c"),
+		ClientID:     "pole-finder",
+		ClientSecret: "a5951d903b5c",
 		Endpoint: oauth2.Endpoint{
 			AuthURL:  "https://oauth-staging.wlink.com.np/authorize",
 			TokenURL: "https://oauth-staging.wlink.com.np/oauth/token",
 		},
-		RedirectURL: "https://pole-finder.wlink.com.np",
+		RedirectURL: "http://pole-finder.wlink.com.np:5173",
 		Scopes:      []string{"openid", "profile", "email"},
 	}
-	oauth2TokenURL = "https://oauth-staging.wlink.com.np/oauth/token"
 )
-
-func init() {
-	store.Options = &sessions.Options{
-		Path:     "/",
-		MaxAge:   int((time.Hour * 1).Seconds()), // Set the cookie expiry time
-		HttpOnly: true,                           // Prevents JavaScript from accessing the cookie
-		Secure:   true,                           // Ensure the cookie is only sent over HTTPS
-		SameSite: http.SameSiteLaxMode,           // Adjust according to your requirements
-	}
-}
 
 func corsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -149,13 +139,14 @@ func handleCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := oauth2Config.Exchange(oauth2.NoContext, code)
+	ctx := context.Background()
+	token, err := oauth2Config.Exchange(ctx, code)
 	if err != nil {
 		http.Error(w, "Failed to exchange token: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	client := oauth2Config.Client(oauth2.NoContext, token)
+	client := oauth2Config.Client(ctx, token)
 	resp, err := client.Get("https://oauth-staging.wlink.com.np/userinfo")
 	if err != nil {
 		http.Error(w, "Failed to get user info: "+err.Error(), http.StatusBadRequest)
@@ -169,8 +160,12 @@ func handleCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Set the user info in session or cookie as required
-	session, _ := store.Get(r, "cookie-name")
+	session, err := store.Get(r, "cookie-name")
+	if err != nil {
+		http.Error(w, "Failed to get session: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	session.Values["authenticated"] = true
 	session.Values["user_info"] = userInfo
 	session.Save(r, w)
@@ -185,32 +180,47 @@ func login(w http.ResponseWriter, r *http.Request) {
 }
 
 func logout(w http.ResponseWriter, r *http.Request) {
-	session, _ := store.Get(r, "cookie-name")
+	session, err := store.Get(r, "cookie-name")
+	if err != nil {
+		http.Error(w, "Failed to get session: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
 
-	// Revoke user's authentication locally
 	session.Values["authenticated"] = false
 	session.Save(r, w)
 
-	// Build the Auth0 logout URL
 	logoutURL := fmt.Sprintf("https://oauth-staging.wlink.com.np/v2/logout?client_id=%s&returnTo=%s",
-		oauth2Config.ClientID,
-		url.QueryEscape("https://pole-finder.wlink.com.np"))
+		oauth2Config.ClientID, "http://pole-finder.wlink.com.np:5173")
 
-	// Redirect to Auth0 logout
 	http.Redirect(w, r, logoutURL, http.StatusTemporaryRedirect)
 }
 
 func secret(w http.ResponseWriter, r *http.Request) {
-	session, _ := store.Get(r, "cookie-name")
+	session, err := store.Get(r, "cookie-name")
+	if err != nil {
+		http.Error(w, "Failed to get session: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
 
-	// Check if user is authenticated
 	if auth, ok := session.Values["authenticated"].(bool); !ok || !auth {
 		http.Error(w, "Forbidden", http.StatusForbidden)
 		return
 	}
 
-	// Print secret message
 	fmt.Fprintln(w, "The cake is a lie!")
+}
+
+func proxyOAuthToken(w http.ResponseWriter, r *http.Request) {
+	target, _ := url.Parse("https://oauth-staging.wlink.com")
+	proxy := httputil.NewSingleHostReverseProxy(target)
+
+	r.URL.Path = "/token"
+	proxy.ModifyResponse = func(response *http.Response) error {
+		response.Header.Set("Access-Control-Allow-Origin", "*") // Again, consider specifying allowed origins.
+		return nil
+	}
+
+	proxy.ServeHTTP(w, r)
 }
 
 func handleWebSocketConnections(w http.ResponseWriter, r *http.Request) {
@@ -1408,17 +1418,20 @@ func main() {
 	mux.HandleFunc("/logins", handleUserLogin(db, cfg))
 	mux.HandleFunc("/refresh-token", handleRefreshToken(cfg))
 	mux.HandleFunc("/password-changer", handlePasswordChanger(db, cfg))
-	mux.HandleFunc("/callback", handleCallback)
-	mux.HandleFunc("/login", login)
-	mux.HandleFunc("/logout", logout)
-	mux.HandleFunc("/secret", secret)
+	http.HandleFunc("/login", login)
+	http.HandleFunc("/callback", handleCallback)
+	http.HandleFunc("/logout", logout)
+	http.HandleFunc("/secret", secret)
+	http.HandleFunc("/oauth/token", proxyOAuthToken)
+
+	http.Handle("/", corsMiddleware(http.DefaultServeMux))
 
 	// CORS middleware
 	corsMiddleware := func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Access-Control-Allow-Origin", "*")
 			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
-			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+			w.Header().Set("Access-Control-Allow-Headers", "*")
 
 			if r.Method == http.MethodOptions {
 				w.WriteHeader(http.StatusOK)

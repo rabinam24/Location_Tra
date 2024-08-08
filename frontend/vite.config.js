@@ -9,8 +9,10 @@ const certPath = path.resolve(__dirname, "./certs");
 const keyPath = path.resolve(certPath, "server.key");
 const certFile = path.resolve(certPath, "server.cert");
 
-const httpsConfig =
-  fs.existsSync(keyPath) && fs.existsSync(certFile)
+// Check environment variable or fall back to default HTTPS setting
+const useHttps = process.env.VITE_USE_HTTPS === 'true';
+
+const httpsConfig = useHttps && fs.existsSync(keyPath) && fs.existsSync(certFile)
     ? {
         key: fs.readFileSync(keyPath),
         cert: fs.readFileSync(certFile),
